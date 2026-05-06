@@ -17,6 +17,7 @@ Aplicativo: Demanda Controller
 - [x] Backup local (arquivo)
 - [x] Backup na nuvem por usuario autenticado
 - [x] Regras de Firestore criadas no projeto
+- [x] Backup automatico do Android desabilitado para evitar persistencia fora do fluxo explicito do app
 - [ ] Regras de Firestore publicadas no Firebase Console
 - [ ] Data Safety do Play Console preenchido conforme dados coletados
 
@@ -42,3 +43,4 @@ Aplicativo: Demanda Controller
 2. Cadastrar URL da politica no Play Console.
 3. Publicar as regras de Firestore no Firebase Console.
 4. Preencher Data Safety conforme os dados realmente tratados pelo app.
+5. Usar ./play-data-safety.md como guia de resposta no Play Console.
