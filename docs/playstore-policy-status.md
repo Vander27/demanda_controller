@@ -38,6 +38,7 @@ Aplicativo: Demanda Controller
 - Termos e licenca: ./terms-license.html
 
 ## 7. Proximo passo recomendado
-1. Publicar estas paginas no GitHub Pages.
+1. Preencher o Play Console com base em ./play-console-preenchimento.md.
 2. Cadastrar URL da politica no Play Console.
-3. Implementar exclusao de conta no app antes da revisao final.
+3. Publicar as regras de Firestore no Firebase Console.
+4. Preencher Data Safety conforme os dados realmente tratados pelo app.
