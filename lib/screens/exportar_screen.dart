@@ -11,6 +11,7 @@ import 'package:file_picker/file_picker.dart';
 import '../controllers/demanda_controller.dart';
 import '../services/cloud_backup_service.dart';
 import '../services/auth_service.dart';
+import '../services/drive_backup_service.dart';
 import '../models/empresa_model.dart';
 import '../models/site_model.dart';
 import '../models/relatorio_model.dart';
@@ -174,8 +175,8 @@ class ExportarScreen extends StatelessWidget {
             _buildOpcaoExportar(
               context,
               icon: Icons.cloud_upload_outlined,
-              titulo: 'Backup na Nuvem',
-              descricao: 'Salvar dados da demanda vinculados ao e-mail logado',
+              titulo: 'Backup no Google Drive',
+              descricao: 'Salvar dados no Drive da conta Google do usuário',
               cor: Colors.teal,
               onTap: () => _backupNuvem(context),
             ),
@@ -192,8 +193,8 @@ class ExportarScreen extends StatelessWidget {
             _buildOpcaoExportar(
               context,
               icon: Icons.cloud_download_outlined,
-              titulo: 'Restaurar da Nuvem',
-              descricao: 'Recuperar os dados salvos na conta atual',
+              titulo: 'Restaurar do Google Drive',
+              descricao: 'Recuperar os dados salvos no Drive da conta Google',
               cor: Colors.blueGrey,
               onTap: () => _restaurarDaNuvem(context),
             ),
@@ -1977,28 +1978,32 @@ class ExportarScreen extends StatelessWidget {
   }
 
   Future<void> _backupNuvem(BuildContext context) async {
-    final cloudBackupService = CloudBackupService();
-    final user = cloudBackupService.usuarioAtual;
-    if (user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Faça login para usar o backup na nuvem.'),
-          backgroundColor: Colors.orange,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        ),
-      );
-      return;
-    }
+    final driveBackupService = DriveBackupService();
 
     try {
       final backupJson = controller.gerarBackupJson();
-      await cloudBackupService.salvarBackupNuvem(backupJson);
+      final ok = await driveBackupService.salvarBackupNoDrive(
+        backupJson,
+        interativo: true,
+      );
+
+      if (!ok) {
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Conecte uma conta Google para salvar no Drive.'),
+            backgroundColor: Colors.orange,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        );
+        return;
+      }
 
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Backup na nuvem concluído para ${user.email ?? 'usuário atual'}.'),
+          content: const Text('Backup salvo com sucesso no Google Drive.'),
           backgroundColor: AppTheme.successColor,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -2018,19 +2023,7 @@ class ExportarScreen extends StatelessWidget {
   }
 
   Future<void> _restaurarDaNuvem(BuildContext context) async {
-    final cloudBackupService = CloudBackupService();
-    final user = cloudBackupService.usuarioAtual;
-    if (user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Faça login para restaurar backup da nuvem.'),
-          backgroundColor: Colors.orange,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        ),
-      );
-      return;
-    }
+    final driveBackupService = DriveBackupService();
 
     final confirm = await showDialog<bool>(
       context: context,
@@ -2057,12 +2050,14 @@ class ExportarScreen extends StatelessWidget {
     if (confirm != true) return;
 
     try {
-      final backupJson = await cloudBackupService.carregarBackupNuvem();
+      final backupJson = await driveBackupService.carregarBackupDoDrive(
+        interativo: true,
+      );
       if (backupJson == null) {
         if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Nenhum backup encontrado na nuvem para esta conta.'),
+            content: const Text('Nenhum backup encontrado no Google Drive desta conta.'),
             backgroundColor: Colors.orange,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -2078,8 +2073,8 @@ class ExportarScreen extends StatelessWidget {
         SnackBar(
           content: Text(
             sucesso
-                ? 'Backup restaurado da nuvem com sucesso.'
-                : 'Falha ao restaurar backup da nuvem.',
+                ? 'Backup restaurado do Google Drive com sucesso.'
+                : 'Falha ao restaurar backup do Google Drive.',
           ),
           backgroundColor: sucesso ? AppTheme.successColor : Colors.red,
           behavior: SnackBarBehavior.floating,
@@ -2090,7 +2085,7 @@ class ExportarScreen extends StatelessWidget {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Erro ao restaurar da nuvem: $e'),
+          content: Text('Erro ao restaurar do Google Drive: $e'),
           backgroundColor: Colors.red,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),

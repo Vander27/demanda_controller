@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../services/cloud_backup_service.dart';
+import '../services/drive_backup_service.dart';
 import '../models/site_model.dart';
 import '../models/adiantamento_model.dart';
 import '../models/empresa_model.dart';
@@ -12,7 +12,7 @@ import '../models/demanda_evento_model.dart';
 import '../models/relatorio_model.dart';
 
 class DemandaController extends ChangeNotifier {
-  final CloudBackupService _cloudBackupService = CloudBackupService();
+  final DriveBackupService _driveBackupService = DriveBackupService();
   List<EmpresaModel> _empresas = [];
   int _empresaSelecionadaIndex = 0;
   List<RelatorioDiario> _relatorios = [];
@@ -321,17 +321,17 @@ class DemandaController extends ChangeNotifier {
   }
 
   void _agendarAutoBackupNuvem() {
-    if (_cloudBackupService.usuarioAtual == null) return;
-
     _autoBackupDebounce?.cancel();
     _autoBackupDebounce = Timer(const Duration(seconds: 2), () async {
       if (_autoBackupEmAndamento) return;
-      if (_cloudBackupService.usuarioAtual == null) return;
 
       _autoBackupEmAndamento = true;
       try {
         final backupJson = gerarBackupJson();
-        await _cloudBackupService.salvarBackupNuvem(backupJson);
+        await _driveBackupService.salvarBackupNoDrive(
+          backupJson,
+          interativo: false,
+        );
       } catch (_) {
         // Falhas de rede/autenticação não devem bloquear o fluxo local.
       } finally {

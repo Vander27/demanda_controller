@@ -65,11 +65,12 @@ Link complementar de termos:
 - E-mail do usuario para autenticacao.
 - Dados inseridos manualmente no app: empresas, sites, adiantamentos, lancamentos, relatorios e configuracoes.
 - Dados tecnicos minimos de operacao do Firebase.
+- Metadados tecnicos necessarios para integracao de backup no Google Drive da conta do usuario.
 
 ### Resumo operacional para o formulario
 
 - Ha coleta de dados: sim.
-- Ha compartilhamento com terceiros essenciais de infraestrutura: sim, com Firebase/Google para autenticacao e backup em nuvem.
+- Ha compartilhamento com terceiros essenciais de infraestrutura: sim, com Firebase/Google para autenticacao e com Google Drive para backup na conta do usuario.
 - Os dados sao transmitidos de forma segura: sim.
 - O usuario pode solicitar exclusao de conta e dados: sim.
 
@@ -82,7 +83,7 @@ Link complementar de termos:
 
 - Funcionalidade do app.
 - Gerenciamento de conta.
-- Backup, sincronizacao e restauracao por usuario autenticado.
+- Backup, sincronizacao e restauracao por usuario autenticado (Google Drive).
 
 ### O que evitar declarar sem necessidade
 

@@ -8,13 +8,13 @@ Este documento resume como preencher a secao Data Safety do Play Console com bas
 ## 1. O app coleta ou compartilha dados?
 
 - Coleta dados: sim.
-- Compartilha dados com terceiros: sim, apenas com provedores essenciais de infraestrutura do proprio servico, como Firebase/Google.
+- Compartilha dados com terceiros: sim, apenas com provedores essenciais de infraestrutura do proprio servico, como Firebase/Google e Google Drive.
 
 ## 2. Os dados sao criptografados em transito?
 
 - Sim.
 
-O app utiliza servicos do Firebase para autenticacao e backup em nuvem, com transmissao protegida em transito.
+O app utiliza servicos do Firebase para autenticacao e Google Drive para backup na conta do usuario, com transmissao protegida em transito.
 
 ## 3. O usuario pode solicitar exclusao dos dados?
 
@@ -53,7 +53,7 @@ Finalidades aplicaveis:
 - Backup, restauracao e sincronizacao
 
 Coleta: sim.
-Compartilhamento: sim, apenas com Firestore/Firebase para backup em nuvem vinculado a conta autenticada.
+Compartilhamento: sim, apenas com Google Drive para backup na conta autenticada do usuario.
 
 ## 5. Tipos de dados que nao devem ser marcados
 
