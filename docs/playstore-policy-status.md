@@ -29,7 +29,8 @@ Aplicativo: Demanda Controller
 
 ## 5. Faixa etaria e publico
 - [ ] Target audience preenchido no Play Console
-- [ ] Confirmar que o app nao e direcionado a criancas
+- [x] Documentacao legal atualizada para esclarecer que classificacao livre nao implica publico infantil
+- [ ] Confirmar no Play Console que o app nao e direcionado a criancas e que o publico pretendido e profissional/adulto
 
 ## 6. Links oficiais para Play Console
 - Home legal: ./index.html
