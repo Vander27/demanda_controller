@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Demanda Controller - Documentos Legais</title>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --card: #ffffff;
+      --ink: #1b2a4a;
+      --muted: #5a6784;
+      --primary: #1d3f8f;
+      --accent: #0f9d8a;
+      --line: #d9e2f2;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      color: var(--ink);
+      background: radial-gradient(circle at top right, #dce8ff 0%, var(--bg) 45%);
+    }
+    .wrap {
+      max-width: 920px;
+      margin: 0 auto;
+      padding: 28px 18px 40px;
+    }
+    .hero {
+      background: linear-gradient(135deg, #17356f, #1d3f8f 60%, #2455b8);
+      border-radius: 18px;
+      padding: 28px;
+      color: #fff;
+      box-shadow: 0 10px 28px rgba(18, 37, 77, 0.22);
+    }
+    .hero h1 { margin: 0; font-size: 28px; }
+    .hero p { margin: 10px 0 0; color: #dde7ff; }
+    .grid {
+      margin-top: 18px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 14px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: 0 4px 14px rgba(30, 54, 102, 0.08);
+    }
+    .card h2 { margin: 0; font-size: 18px; color: var(--primary); }
+    .card p { margin: 8px 0 14px; color: var(--muted); line-height: 1.45; }
+    .btn {
+      display: inline-block;
+      text-decoration: none;
+      color: #fff;
+      background: var(--primary);
+      border-radius: 999px;
+      padding: 9px 14px;
+      font-weight: 600;
+      font-size: 14px;
+    }
+    .btn.alt { background: var(--accent); }
+    .foot {
+      margin-top: 18px;
+      color: var(--muted);
+      font-size: 13px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <section class="hero">
+      <h1>Demanda Controller</h1>
+      <p>Documentos legais oficiais do aplicativo para publicação na Google Play.</p>
+    </section>
+
+    <section class="grid">
+      <article class="card">
+        <h2>Política de Privacidade</h2>
+        <p>Detalha quais dados são coletados, finalidade, segurança, retenção e direitos do usuário.</p>
+        <a class="btn" href="privacy-policy.html">Abrir política</a>
+      </article>
+
+      <article class="card">
+        <h2>Termos e Licença de Uso</h2>
+        <p>Define condições de uso do app, responsabilidades, limitações e propriedade intelectual.</p>
+        <a class="btn alt" href="terms-license.html">Abrir termos</a>
+      </article>
+    </section>
+
+    <section class="grid">
+      <article class="card">
+        <h2>Uso na Play Store</h2>
+        <p>A URL principal normalmente usada no Play Console e a da Politica de Privacidade. Os Termos e Licenca complementam a documentacao legal do app.</p>
+        <a class="btn" href="publicacao-github-pages.md">Ver guia rapido</a>
+      </article>
+    </section>
+
+    <p class="foot">Atualizado em 06/05/2026 · VJC Technology</p>
+  </main>
+</body>
+</html>

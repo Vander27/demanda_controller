@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "132555717013",
+    "project_id": "macefo-e47ac",
+    "storage_bucket": "macefo-e47ac.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:132555717013:android:d180662d42f6933b081e9c",
+        "android_client_info": {
+          "package_name": "com.vjc.demanda_controller"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD88f_ccqzttYk_ajfZ36nUlEJlYn1IGV4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
