@@ -1,6 +1,8 @@
 import 'dart:convert';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../services/cloud_backup_service.dart';
 import '../models/site_model.dart';
 import '../models/adiantamento_model.dart';
 import '../models/empresa_model.dart';
@@ -10,6 +12,7 @@ import '../models/demanda_evento_model.dart';
 import '../models/relatorio_model.dart';
 
 class DemandaController extends ChangeNotifier {
+  final CloudBackupService _cloudBackupService = CloudBackupService();
   List<EmpresaModel> _empresas = [];
   int _empresaSelecionadaIndex = 0;
   List<RelatorioDiario> _relatorios = [];
@@ -24,6 +27,14 @@ class DemandaController extends ChangeNotifier {
   Map<String, String> _filtroPlanosPorEmpresa = {};
   Map<String, String> _presetVisualizacaoFinanceiraPorEmpresa = {};
   Map<String, bool> _mostrarAtalhosPresetsPorEmpresa = {};
+  Timer? _autoBackupDebounce;
+  bool _autoBackupEmAndamento = false;
+
+  @override
+  void dispose() {
+    _autoBackupDebounce?.cancel();
+    super.dispose();
+  }
 
   static const String _ordenacaoLancamentosKey =
       'ordenacao_lancamentos_por_empresa_v1';
@@ -306,6 +317,27 @@ class DemandaController extends ChangeNotifier {
   Future<void> _salvar() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('empresas_v2', EmpresaModel.encodeList(_empresas));
+    _agendarAutoBackupNuvem();
+  }
+
+  void _agendarAutoBackupNuvem() {
+    if (_cloudBackupService.usuarioAtual == null) return;
+
+    _autoBackupDebounce?.cancel();
+    _autoBackupDebounce = Timer(const Duration(seconds: 2), () async {
+      if (_autoBackupEmAndamento) return;
+      if (_cloudBackupService.usuarioAtual == null) return;
+
+      _autoBackupEmAndamento = true;
+      try {
+        final backupJson = gerarBackupJson();
+        await _cloudBackupService.salvarBackupNuvem(backupJson);
+      } catch (_) {
+        // Falhas de rede/autenticação não devem bloquear o fluxo local.
+      } finally {
+        _autoBackupEmAndamento = false;
+      }
+    });
   }
 
   // === EMPRESAS ===
@@ -1275,11 +1307,13 @@ class DemandaController extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(
         'relatorios_v1', RelatorioDiario.encodeList(_relatorios));
+    _agendarAutoBackupNuvem();
   }
 
   Future<void> _salvarRelatorioConfig() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('relatorio_config', _relatorioConfig.encode());
+    _agendarAutoBackupNuvem();
   }
 
   Future<void> _salvarDemandasArquivadas() async {
@@ -1288,6 +1322,7 @@ class DemandaController extends ChangeNotifier {
       'demandas_arquivadas_v1',
       DemandaGeralModel.encodeList(_demandasArquivadas),
     );
+    _agendarAutoBackupNuvem();
   }
 
   Future<void> _salvarEventosDemanda() async {
@@ -1296,6 +1331,7 @@ class DemandaController extends ChangeNotifier {
       'demanda_eventos_v1',
       DemandaEventoModel.encodeList(_eventosDemanda),
     );
+    _agendarAutoBackupNuvem();
   }
 
   void _registrarEventoDemanda(
