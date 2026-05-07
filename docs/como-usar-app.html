@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Demanda Controller - Manual de Operacao</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f3faff;
+      --surface: #ffffff;
+      --ink: #0f2a40;
+      --muted: #4e647b;
+      --line: #cfe2f1;
+      --brand: #0d4b78;
+      --brand-2: #1488a0;
+      --accent: #0bb39c;
+      --warn: #f7a83d;
+      --shadow: rgba(18, 78, 118, 0.12);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      font-family: "Space Grotesk", "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at 10% 7%, rgba(11, 179, 156, 0.2), transparent 35%),
+        radial-gradient(circle at 90% 13%, rgba(20, 136, 160, 0.25), transparent 38%),
+        linear-gradient(180deg, #f8fdff 0%, var(--bg) 100%);
+      overflow-x: hidden;
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(15, 42, 64, 0.032) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(15, 42, 64, 0.032) 1px, transparent 1px);
+      background-size: 30px 30px;
+      opacity: 0.75;
+    }
+    .wrap {
+      max-width: 1040px;
+      margin: 0 auto;
+      padding: 26px 16px 42px;
+      position: relative;
+      z-index: 1;
+    }
+    .hero {
+      position: relative;
+      border-radius: 24px;
+      padding: 26px;
+      color: #e8f8ff;
+      background: linear-gradient(130deg, #0f3858 0%, #145b84 48%, #18a09e 100%);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      box-shadow: 0 18px 34px rgba(17, 88, 136, 0.25);
+      animation: riseIn 650ms ease-out both;
+    }
+    .hero::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: 24px;
+      background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.13) 46%, transparent 100%);
+      transform: translateX(-120%);
+      animation: stream 6s ease-in-out infinite;
+      pointer-events: none;
+    }
+    .hero small {
+      display: inline-block;
+      font-size: 11px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: #b8e7f8;
+      margin-bottom: 10px;
+    }
+    h1 {
+      margin: 0;
+      font-family: "Orbitron", "Space Grotesk", sans-serif;
+      font-size: clamp(1.5rem, 3.3vw, 2.2rem);
+      letter-spacing: 0.03em;
+      line-height: 1.24;
+      color: #ffffff;
+    }
+    .hero p {
+      margin: 10px 0 0;
+      max-width: 760px;
+      line-height: 1.55;
+      color: #d8f2ff;
+      font-size: 0.96rem;
+    }
+    .hero-actions {
+      margin-top: 14px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      text-decoration: none;
+      border-radius: 999px;
+      border: 1px solid transparent;
+      padding: 8px 13px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      transition: transform 180ms ease, box-shadow 180ms ease;
+    }
+    .btn.primary {
+      background: #ffffff;
+      color: #0f4f78;
+      box-shadow: 0 8px 18px rgba(255, 255, 255, 0.28);
+    }
+    .btn.alt {
+      color: #dff7ff;
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.3);
+    }
+    .btn:hover { transform: translateY(-2px); }
+    .section {
+      margin-top: 14px;
+      background: linear-gradient(180deg, #ffffff 0%, #f8fdff 100%);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 7px 18px var(--shadow);
+      animation: riseIn 620ms ease-out both;
+    }
+    .section:nth-of-type(2) { animation-delay: 70ms; }
+    .section:nth-of-type(3) { animation-delay: 110ms; }
+    .section:nth-of-type(4) { animation-delay: 140ms; }
+    .section:nth-of-type(5) { animation-delay: 170ms; }
+    .section h2 {
+      margin: 0;
+      font-family: "Orbitron", "Space Grotesk", sans-serif;
+      font-size: 1rem;
+      letter-spacing: 0.02em;
+      color: var(--brand);
+      line-height: 1.35;
+    }
+    .steps {
+      margin: 10px 0 0;
+      padding-left: 20px;
+      color: #1f3d57;
+      line-height: 1.48;
+    }
+    .steps li { margin: 6px 0; }
+    .tag {
+      display: inline-block;
+      margin-top: 8px;
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      border: 1px solid #b3e9df;
+      background: #eaf9f6;
+      color: #0f7a6d;
+    }
+    .tag.warn {
+      border-color: #f6d3a4;
+      background: #fff5e7;
+      color: #9f6415;
+    }
+    .grid {
+      margin-top: 14px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 10px;
+    }
+    .mini {
+      border: 1px solid var(--line);
+      background: #fbfeff;
+      border-radius: 14px;
+      padding: 13px;
+      box-shadow: 0 6px 14px rgba(13, 75, 120, 0.07);
+    }
+    .mini h3 {
+      margin: 0;
+      color: #145173;
+      font-size: 0.95rem;
+      font-family: "Orbitron", "Space Grotesk", sans-serif;
+      letter-spacing: 0.02em;
+    }
+    .mini p {
+      margin: 7px 0 0;
+      color: var(--muted);
+      line-height: 1.42;
+      font-size: 0.88rem;
+    }
+    .footer {
+      margin-top: 18px;
+      text-align: center;
+      color: #4c647c;
+      font-size: 0.8rem;
+    }
+    @keyframes riseIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes stream {
+      0% { transform: translateX(-120%); opacity: 0; }
+      35% { opacity: 0.9; }
+      50% { transform: translateX(28%); opacity: 0.58; }
+      100% { transform: translateX(120%); opacity: 0; }
+    }
+    @media (max-width: 640px) {
+      .wrap { padding: 20px 14px 34px; }
+      .hero { padding: 22px 16px; border-radius: 18px; }
+      .section { padding: 14px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <section class="hero">
+      <small>Manual Oficial de Operacao</small>
+      <h1>Como usar o Demanda Controller</h1>
+      <p>Fluxo operacional completo para garantir produtividade no campo, consistencia financeira e rastreabilidade dos relatorios no ambiente TSSR.</p>
+      <div class="hero-actions">
+        <a class="btn primary" href="index.html">Voltar ao portal</a>
+        <a class="btn alt" href="privacy-policy.html">Politica de privacidade</a>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>1) Primeiro acesso e seguranca</h2>
+      <ol class="steps">
+        <li>Entre no app com e-mail e senha ativos.</li>
+        <li>Ative lembrar credenciais somente em dispositivo confiavel.</li>
+        <li>Valide empresa ativa antes de iniciar qualquer lancamento.</li>
+      </ol>
+      <span class="tag">Padrao recomendado para operacao segura</span>
+    </section>
+
+    <section class="section">
+      <h2>2) Estruture a empresa corretamente</h2>
+      <ol class="steps">
+        <li>Cadastre nome da empresa e valor por site.</li>
+        <li>Defina politica de adiantamento alinhada ao contrato operacional.</li>
+        <li>Revise indicadores iniciais no dashboard antes de seguir para campo.</li>
+      </ol>
+    </section>
+
+    <section class="section">
+      <h2>3) Rotina diaria de execucao de sites</h2>
+      <ol class="steps">
+        <li>Adicione ou importe Site IDs na lista da empresa.</li>
+        <li>Marque status como Concluido, Nao Concluido ou Pendente.</li>
+        <li>Em Nao Concluido, registre motivo para auditoria tecnica posterior.</li>
+        <li>Use filtros para monitorar pendencias e garantir cobertura do lote.</li>
+      </ol>
+      <span class="tag warn">Atualizar status em tempo real evita divergencia financeira</span>
+    </section>
+
+    <section class="section">
+      <h2>4) Relatorio diario TSSR com rastreabilidade</h2>
+      <ol class="steps">
+        <li>Preencha operadora, projeto, fabricante e regiao.</li>
+        <li>Registre resultado por site do dia: feito ou problema com motivo.</li>
+        <li>Salve para manter historico confiavel e pronto para exportacao.</li>
+      </ol>
+    </section>
+
+    <section class="section">
+      <h2>5) Gestao financeira e encerramento de ciclo</h2>
+      <ol class="steps">
+        <li>Acompanhe ganho, perdido e saldo a receber no dashboard.</li>
+        <li>Registre adiantamentos, parcelas e pagamentos com data e valor.</li>
+        <li>Antes de encerrar a demanda, exporte evidencias e gere backup.</li>
+      </ol>
+    </section>
+
+    <section class="grid">
+      <article class="mini">
+        <h3>Fluxo premium sugerido</h3>
+        <p>Configurar empresa -> Operar sites -> Registrar relatorio -> Auditar financeiro -> Exportar e arquivar.</p>
+      </article>
+      <article class="mini">
+        <h3>Ritmo operacional</h3>
+        <p>Fechamento diario reduz retrabalho, melhora previsao de saldo e aumenta confiabilidade do historico.</p>
+      </article>
+      <article class="mini">
+        <h3>Publicacao remota</h3>
+        <p>Esta pagina pode ser publicada junto da home legal no GitHub Pages dentro da pasta docs.</p>
+      </article>
+    </section>
+
+    <p class="footer">Demanda Controller · Manual de Operacao · Atualizado em 07/05/2026</p>
+  </main>
+</body>
+</html>
