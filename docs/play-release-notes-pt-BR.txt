@@ -1,0 +1,7 @@
+Demanda Controller - Atualizacao profissional
+
+- Novo portal de documentacao legal e operacional com visual premium.
+- Guia de uso do aplicativo publicado para orientar fluxo completo de operacao.
+- Melhorias de conformidade para publicacao na Play Store.
+- Ajustes de documentacao para politica de privacidade, termos e processo de preenchimento do Play Console.
+- Melhorias gerais de estabilidade e preparacao de release.
