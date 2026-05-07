@@ -1,6 +1,6 @@
 # Status de Politicas - Play Store
 
-Atualizado em: 06/05/2026
+Atualizado em: 07/05/2026
 Aplicativo: Demanda Controller
 
 ## 1. Conta e autenticacao
@@ -34,9 +34,10 @@ Aplicativo: Demanda Controller
 - [ ] Confirmar no Play Console que o app nao e direcionado a criancas e que o publico pretendido e profissional/adulto
 
 ## 6. Links oficiais para Play Console
-- Home legal: ./index.html
-- Politica de privacidade: ./privacy-policy.html
-- Termos e licenca: ./terms-license.html
+- Home legal: https://vander27.github.io/demanda_controller/
+- Politica de privacidade: https://vander27.github.io/demanda_controller/privacy-policy.html
+- Termos e licenca: https://vander27.github.io/demanda_controller/terms-license.html
+- Guia de uso do app: https://vander27.github.io/demanda_controller/como-usar-app.html
 
 ## 7. Proximo passo recomendado
 1. Preencher o Play Console com base em ./play-console-preenchimento.md.
