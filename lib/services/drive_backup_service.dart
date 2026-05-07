@@ -68,6 +68,20 @@ class DriveBackupService {
     return true;
   }
 
+  Future<bool> verificarConexao() async {
+    final conta = await _googleSignIn.signInSilently();
+    return conta != null;
+  }
+
+  Future<bool> conectarInterativo() async {
+    try {
+      final conta = await _googleSignIn.signIn();
+      return conta != null;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<String?> carregarBackupDoDrive({bool interativo = true}) async {
     final api = await _obterApiDrive(interativo: interativo);
     if (api == null) return null;

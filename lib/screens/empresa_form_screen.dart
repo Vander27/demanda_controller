@@ -27,6 +27,7 @@ class _EmpresaFormScreenState extends State<EmpresaFormScreen> {
   late TextEditingController _sitesPorLoteCtrl;
   late TextEditingController _valorFixoCtrl;
   late TextEditingController _sitesCtrl;
+  final FocusNode _percentualFocusNode = FocusNode();
 
   TipoAdiantamento _tipoAdiantamento = TipoAdiantamento.percentualPorLote;
   bool _isEditing = false;
@@ -53,8 +54,8 @@ class _EmpresaFormScreenState extends State<EmpresaFormScreen> {
     } else {
       _nomeCtrl = TextEditingController();
       _valorSiteCtrl = TextEditingController(text: '600.00');
-      _percentualCtrl = TextEditingController(text: '40');
-      _sitesPorLoteCtrl = TextEditingController(text: '20');
+      _percentualCtrl = TextEditingController();
+      _sitesPorLoteCtrl = TextEditingController(text: '1');
       _valorFixoCtrl = TextEditingController(text: '0.00');
       _sitesCtrl = TextEditingController();
     }
@@ -68,6 +69,7 @@ class _EmpresaFormScreenState extends State<EmpresaFormScreen> {
     _sitesPorLoteCtrl.dispose();
     _valorFixoCtrl.dispose();
     _sitesCtrl.dispose();
+    _percentualFocusNode.dispose();
     super.dispose();
   }
 
@@ -139,6 +141,7 @@ class _EmpresaFormScreenState extends State<EmpresaFormScreen> {
               TextFormField(
                 controller: _nomeCtrl,
                 decoration: _inputDecoration('Nome da Empresa', Icons.business),
+                onChanged: (_) => setState(() {}),
                 validator: (v) =>
                     v == null || v.isEmpty ? 'Informe o nome' : null,
               ),
@@ -168,8 +171,16 @@ class _EmpresaFormScreenState extends State<EmpresaFormScreen> {
                   padding: const EdgeInsets.all(8),
                   child: RadioGroup<TipoAdiantamento>(
                     groupValue: _tipoAdiantamento,
-                    onChanged: (v) =>
-                        setState(() => _tipoAdiantamento = v!),
+                    onChanged: (v) {
+                      if (v == null) return;
+                      setState(() => _tipoAdiantamento = v);
+                      if (v == TipoAdiantamento.percentualPorLote) {
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (!mounted) return;
+                          _percentualFocusNode.requestFocus();
+                        });
+                      }
+                    },
                     child: Column(
                       children: TipoAdiantamento.values.map((tipo) {
                         return RadioListTile<TipoAdiantamento>(
@@ -195,16 +206,23 @@ class _EmpresaFormScreenState extends State<EmpresaFormScreen> {
               if (_tipoAdiantamento == TipoAdiantamento.percentualPorLote) ...[
                 TextFormField(
                   controller: _percentualCtrl,
+                  focusNode: _percentualFocusNode,
                   keyboardType: TextInputType.number,
-                  decoration:
-                      _inputDecoration('Percentual (%)', Icons.percent),
+                  decoration: _inputDecoration('Percentual (%)', Icons.percent)
+                      .copyWith(
+                    hintText: 'Ex.: 40',
+                    helperText: 'Informe apenas o percentual do acordo.',
+                  ),
                 ),
                 const SizedBox(height: 14),
                 TextFormField(
                   controller: _sitesPorLoteCtrl,
                   keyboardType: TextInputType.number,
                   decoration: _inputDecoration(
-                      'Sites por Lote', Icons.format_list_numbered),
+                      'Sites por Lote', Icons.format_list_numbered).copyWith(
+                    hintText: 'Ex.: 20',
+                    helperText: 'Quantidade de sites necessária para cada CPS.',
+                  ),
                 ),
               ],
               if (_tipoAdiantamento == TipoAdiantamento.valorFixoSemanal ||
@@ -350,7 +368,11 @@ class _EmpresaFormScreenState extends State<EmpresaFormScreen> {
   String _tipoDescricao(TipoAdiantamento tipo) {
     switch (tipo) {
       case TipoAdiantamento.percentualPorLote:
-        return 'Ex: Prencell - 40% a cada 20 sites concluídos';
+        final nomeEmpresa = _nomeCtrl.text.trim();
+        if (nomeEmpresa.isNotEmpty) {
+          return 'Ex.: $nomeEmpresa - % a cada 1 site concluído';
+        }
+        return 'Ex.: % a cada 1 site concluído';
       case TipoAdiantamento.valorFixoSemanal:
         return 'Acordo de valor fixo recebido por semana';
       case TipoAdiantamento.valorFixoUnico:
@@ -390,11 +412,33 @@ class _EmpresaFormScreenState extends State<EmpresaFormScreen> {
     final valorSite =
         double.parse(_valorSiteCtrl.text.replaceAll(',', '.'));
     final percentual =
-        (double.tryParse(_percentualCtrl.text) ?? 40) / 100;
+        (double.tryParse(_percentualCtrl.text.replaceAll(',', '.')) ?? 0) / 100;
     final sitesPorLote =
-        int.tryParse(_sitesPorLoteCtrl.text) ?? 20;
+        int.tryParse(_sitesPorLoteCtrl.text) ?? 1;
     final valorFixo =
         double.tryParse(_valorFixoCtrl.text.replaceAll(',', '.')) ?? 0;
+
+    if (_tipoAdiantamento == TipoAdiantamento.percentualPorLote) {
+      if (percentual <= 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Informe o percentual do acordo.'),
+            backgroundColor: AppTheme.errorColor,
+          ),
+        );
+        return;
+      }
+
+      if (sitesPorLote <= 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Informe a quantidade de sites por lote.'),
+            backgroundColor: AppTheme.errorColor,
+          ),
+        );
+        return;
+      }
+    }
 
     List<SiteModel> sites;
     List<AdiantamentoModel> adiantamentos;

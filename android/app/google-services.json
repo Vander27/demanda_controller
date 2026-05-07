@@ -12,7 +12,16 @@
           "package_name": "com.vjc.demanda_controller"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "132555717013-pkujd5qt166kfn91elpc4nnie1qf6okk.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.vjc.demanda_controller",
+            "certificate_hash": "fd300ed197dcf2fd5285a9cf3099a7a9da1efc8c"
+          }
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyD88f_ccqzttYk_ajfZ36nUlEJlYn1IGV4"

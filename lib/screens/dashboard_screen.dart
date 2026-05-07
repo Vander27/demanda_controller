@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -18,6 +19,9 @@ import 'adiantamentos_screen.dart';
 import 'exportar_screen.dart';
 import 'empresa_form_screen.dart';
 import 'relatorio_diario_screen.dart';
+import 'login_screen.dart';
+import '../utils/currency_utils.dart';
+import 'historico_demandas_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   final DemandaController controller;
@@ -31,6 +35,7 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  bool _driveConectado = false;
 
   DemandaController get ctrl => widget.controller;
   EmpresaModel? get emp => ctrl.empresaAtual;
@@ -40,6 +45,54 @@ class _DashboardScreenState extends State<DashboardScreen>
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
     ctrl.addListener(_onUpdate);
+    _verificarStatusDrive();
+  }
+
+  Future<void> _verificarStatusDrive() async {
+    final conectado = await ctrl.verificarConexaoDrive();
+    if (mounted) setState(() => _driveConectado = conectado);
+  }
+
+  Future<void> _alternarConexaoDrive() async {
+    if (_driveConectado) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.cloud_done, color: Colors.white, size: 18),
+              SizedBox(width: 8),
+              Text('Drive conectado. Backup automático ativo.'),
+            ],
+          ),
+          backgroundColor: AppTheme.successColor,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+    final ok = await ctrl.conectarDriveInterativo();
+    if (mounted) {
+      setState(() => _driveConectado = ok);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(
+                ok ? Icons.cloud_done : Icons.cloud_off,
+                color: Colors.white,
+                size: 18,
+              ),
+              const SizedBox(width: 8),
+              Text(ok
+                  ? 'Drive conectado! Backup automático ativo.'
+                  : 'Não foi possível conectar ao Drive.'),
+            ],
+          ),
+          backgroundColor: ok ? AppTheme.successColor : Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   void _onUpdate() {
@@ -175,6 +228,19 @@ class _DashboardScreenState extends State<DashboardScreen>
           onPressed: () => _abrirFormEmpresa(),
         ),
         IconButton(
+          icon: Icon(
+            _driveConectado ? Icons.cloud_done : Icons.cloud_off,
+            color: _driveConectado
+                ? AppTheme.successColor
+                : Colors.white54,
+            size: 22,
+          ),
+          tooltip: _driveConectado
+              ? 'Drive conectado'
+              : 'Conectar ao Drive',
+          onPressed: _alternarConexaoDrive,
+        ),
+        IconButton(
           icon: const Icon(Icons.file_download),
           tooltip: 'Exportar',
           onPressed: () => Navigator.push(
@@ -201,6 +267,12 @@ class _DashboardScreenState extends State<DashboardScreen>
                 break;
               case 'restaurar':
                 _restaurarBackup();
+                break;
+              case 'excluir_conta':
+                _abrirExcluirContaEDados();
+                break;
+              case 'sair':
+                _sair();
                 break;
             }
           },
@@ -256,6 +328,28 @@ class _DashboardScreenState extends State<DashboardScreen>
                 ],
               ),
             ),
+            const PopupMenuDivider(),
+            PopupMenuItem(
+              value: 'excluir_conta',
+              child: Row(
+                children: [
+                  Icon(Icons.delete_forever, size: 20, color: Colors.red[700]),
+                  const SizedBox(width: 12),
+                  Text('Excluir Conta e Dados', style: TextStyle(color: Colors.red[700])),
+                ],
+              ),
+            ),
+            const PopupMenuDivider(),
+            PopupMenuItem(
+              value: 'sair',
+              child: Row(
+                children: [
+                  Icon(Icons.logout, size: 20, color: Colors.red[700]),
+                  const SizedBox(width: 12),
+                  Text('Sair', style: TextStyle(color: Colors.red[700])),
+                ],
+              ),
+            ),
           ],
         ),
       ],
@@ -308,6 +402,96 @@ class _DashboardScreenState extends State<DashboardScreen>
           editIndex: editIndex,
         ),
       ),
+    );
+  }
+
+  Future<void> _confirmarExcluirEmpresa(int index) async {
+    if (index < 0 || index >= ctrl.empresas.length) return;
+    final empresa = ctrl.empresas[index];
+
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Excluir empresa?'),
+        content: Text(
+          'Deseja excluir a empresa "${empresa.nome}"? Todos os sites, adiantamentos e lançamentos dela serão removidos da demanda ativa.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.errorColor),
+            child: const Text('Excluir'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmar != true) return;
+
+    ctrl.removerEmpresa(index);
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Empresa "${empresa.nome}" excluída com sucesso.'),
+        backgroundColor: AppTheme.errorColor,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  Future<void> _abrirExcluirContaEDados() async {
+    if (!mounted) return;
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ExportarScreen(controller: ctrl),
+      ),
+    );
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Na tela de Exportar, use a opção "Excluir Conta e Dados".',
+        ),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  Future<void> _sair() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Sair'),
+        content: const Text('Deseja sair da conta? Precisará fazer login novamente.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Sair'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+    await FirebaseAuth.instance.signOut();
+    if (!mounted) return;
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(
+        builder: (_) => LoginScreen(controller: widget.controller),
+      ),
+      (_) => false,
     );
   }
 
@@ -501,9 +685,15 @@ class _DashboardScreenState extends State<DashboardScreen>
     final responsavelCtrl = TextEditingController();
     final observacaoCtrl = TextEditingController();
     final nomeSugerido = (ctrl.nomeDemandaSugerido ?? '').trim();
+    final responsavelSugerido =
+        (ctrl.responsavelFechamentoSugerido ?? '').trim();
     bool usarMesmoNome = nomeSugerido.isNotEmpty;
+    String? nomeErro;
     if (usarMesmoNome) {
       nomeCtrl.text = nomeSugerido;
+    }
+    if (responsavelSugerido.isNotEmpty) {
+      responsavelCtrl.text = responsavelSugerido;
     }
     final confirmar = await showDialog<bool>(
       context: context,
@@ -533,6 +723,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                       usarMesmoNome = v ?? false;
                       if (usarMesmoNome) {
                         nomeCtrl.text = nomeSugerido;
+                        nomeErro = null;
                       }
                     });
                   },
@@ -545,9 +736,11 @@ class _DashboardScreenState extends State<DashboardScreen>
               TextField(
                 controller: nomeCtrl,
                 enabled: !usarMesmoNome,
+                onChanged: (_) => setDialogState(() => nomeErro = null),
                 decoration: InputDecoration(
-                  labelText: 'Nome da demanda (opcional)',
+                  labelText: 'Nome da demanda',
                   hintText: 'Ex: PRCELL Abril/2026',
+                  errorText: nomeErro,
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                 ),
               ),
@@ -578,7 +771,14 @@ class _DashboardScreenState extends State<DashboardScreen>
               child: const Text('Cancelar'),
             ),
             ElevatedButton(
-              onPressed: () => Navigator.pop(ctx, true),
+              onPressed: () {
+                final nomeDigitado = usarMesmoNome ? nomeSugerido : nomeCtrl.text.trim();
+                if (nomeDigitado.isEmpty) {
+                  setDialogState(() => nomeErro = 'Informe um nome para a demanda');
+                  return;
+                }
+                Navigator.pop(ctx, true);
+              },
               style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
               child: const Text('Concluir e Limpar'),
             ),
@@ -589,12 +789,22 @@ class _DashboardScreenState extends State<DashboardScreen>
 
     if (confirmar != true) return;
 
-    await ctrl.concluirDemandaGeral(
+    final concluiu = await ctrl.concluirDemandaGeral(
       nome: nomeCtrl.text,
       responsavel: responsavelCtrl.text,
       observacao: observacaoCtrl.text,
       usarNomeSugerido: usarMesmoNome,
     );
+    if (!concluiu) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Informe um nome para concluir e arquivar a demanda.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
     _tabController.animateTo(0);
 
     if (!mounted) return;
@@ -610,6 +820,15 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   void _abrirHistoricoDemandas() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => HistoricoDemandasScreen(controller: ctrl),
+      ),
+    );
+  }
+
+  void _abrirHistoricoDemandasLegado() {
     String filtroStatus = 'todos';
     String busca = '';
     String ordenacao = 'mais_recente';
@@ -1072,43 +1291,93 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   Future<void> _reabrirDemandaDoHistorico(
       String demandaId, String nomeDemanda, BuildContext sheetContext) async {
+    bool manterDatasOriginais = true;
+    DateTime novaDataBase = DateTime.now();
+
     final confirmar = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Row(
-          children: [
-            Icon(Icons.restore_page, color: AppTheme.primaryColor),
-            SizedBox(width: 8),
-            Text('Reabrir Demanda'),
-          ],
-        ),
-        content: Text(
-          'Deseja restaurar a demanda "$nomeDemanda"?\n\nOs dados atuais serão substituídos pelos dados desta demanda.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancelar'),
+      builder: (ctx) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Row(
+            children: [
+              Icon(Icons.restore_page, color: AppTheme.primaryColor),
+              SizedBox(width: 8),
+              Text('Reabrir Demanda'),
+            ],
           ),
-          ElevatedButton.icon(
-            onPressed: () => Navigator.pop(ctx, true),
-            icon: const Icon(Icons.restore_page, size: 18),
-            label: const Text('Reabrir'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primaryColor,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Deseja restaurar a demanda "$nomeDemanda"?\n\nOs dados atuais serão substituídos pelos dados desta demanda.',
+                ),
+                const SizedBox(height: 14),
+                SwitchListTile.adaptive(
+                  contentPadding: EdgeInsets.zero,
+                  value: manterDatasOriginais,
+                  onChanged: (value) {
+                    setDialogState(() => manterDatasOriginais = value);
+                  },
+                  title: const Text('Manter datas originais'),
+                  subtitle: const Text('Sites, relatórios e fechamentos serão restaurados com as datas gravadas.'),
+                ),
+                if (!manterDatasOriginais)
+                  InkWell(
+                    onTap: () async {
+                      final picked = await showDatePicker(
+                        context: dialogContext,
+                        initialDate: novaDataBase,
+                        firstDate: DateTime(2020),
+                        lastDate: DateTime(2035),
+                      );
+                      if (picked != null) {
+                        setDialogState(() => novaDataBase = picked);
+                      }
+                    },
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text('Nova data base: ${_formatDate(novaDataBase)}'),
+                    ),
+                  ),
+              ],
             ),
           ),
-        ],
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton.icon(
+              onPressed: () => Navigator.pop(ctx, true),
+              icon: const Icon(Icons.restore_page, size: 18),
+              label: const Text('Reabrir'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryColor,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ],
+        ),
       ),
     );
 
     if (confirmar != true || !mounted) return;
 
     Navigator.pop(sheetContext);
-    final ok = await ctrl.reabrirDemandaGeral(demandaId);
+    final ok = await ctrl.reabrirDemandaGeral(
+      demandaId,
+      manterDatasOriginais: manterDatasOriginais,
+      novaDataBase: manterDatasOriginais ? null : novaDataBase,
+    );
     if (!mounted || !ok) return;
 
     _tabController.animateTo(0);
@@ -1493,19 +1762,29 @@ class _DashboardScreenState extends State<DashboardScreen>
                   final isSelected = index == ctrl.empresaSelecionadaIndex;
                   return Padding(
                     padding: const EdgeInsets.only(right: 8),
-                    child: ChoiceChip(
-                      label: Text(e.nome),
-                      selected: isSelected,
-                      selectedColor: AppTheme.primaryColor,
-                      labelStyle: TextStyle(
-                        color: isSelected ? Colors.white : AppTheme.primaryColor,
-                        fontWeight: FontWeight.w600,
+                    child: GestureDetector(
+                      onLongPress: () => _confirmarExcluirEmpresa(index),
+                      child: ChoiceChip(
+                        label: Text(e.nome),
+                        selected: isSelected,
+                        selectedColor: AppTheme.primaryColor,
+                        labelStyle: TextStyle(
+                          color: isSelected ? Colors.white : AppTheme.primaryColor,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        backgroundColor: AppTheme.primaryColor.withAlpha(20),
+                        onSelected: (_) => ctrl.selecionarEmpresa(index),
                       ),
-                      backgroundColor: AppTheme.primaryColor.withAlpha(20),
-                      onSelected: (_) => ctrl.selecionarEmpresa(index),
                     ),
                   );
                 },
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(
+                'Dica: pressione e segure uma empresa para excluir.',
+                style: TextStyle(fontSize: 11, color: Colors.grey[600]),
               ),
             ),
             Padding(
@@ -1516,7 +1795,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                   const SizedBox(width: 4),
                   Flexible(
                     child: Text(
-                      '${emp!.tipoAdiantamentoDescricao} • R\$ ${emp!.valorPorSite.toStringAsFixed(2).replaceAll('.', ',')}/site',
+                      '${emp!.tipoAdiantamentoDescricao} • ${_formatCurrency(emp!.valorPorSite)}/site',
                       style: TextStyle(fontSize: 11, color: Colors.grey[600]),
                     ),
                   ),
@@ -1552,18 +1831,29 @@ class _DashboardScreenState extends State<DashboardScreen>
       gradient = AppTheme.warningGradient;
       statusIcon = Icons.rocket_launch;
       final numAdiant = emp!.adiantamentos.length + 1;
+      final sitesSemCobertura = emp!.sitesElegiveisSemCoberturaAdiantamento;
       titulo = 'SOLICITAR $numAdiant° ADIANTAMENTO';
-      subtitulo = 'Lote de ${emp!.sitesPorLote} sites concluído! Toque para registrar: ${_formatCurrency(emp!.valorAdiantamentoLote)}';
+      subtitulo = sitesSemCobertura == emp!.sitesPorLote
+          ? 'Lote de ${emp!.sitesPorLote} sites concluído! Toque para registrar: ${_formatCurrency(emp!.valorAdiantamentoLote)}'
+          : '$sitesSemCobertura ${sitesSemCobertura == 1 ? 'site novo sem cobertura' : 'sites novos sem cobertura'} • Toque para registrar: ${_formatCurrency(emp!.valorAdiantamentoLote)}';
     } else if (temAdiantamento && emp!.tipoAdiantamento == TipoAdiantamento.percentualPorLote) {
-      gradient = AppTheme.accentGradient;
-      statusIcon = Icons.trending_up;
-      final sitesNoLote = emp!.sitesNoLoteAtual;
-      final loteTamanho = emp!.sitesPorLoteAtual;
-      final faltam = emp!.sitesAteLoteAtual;
-      titulo = 'EM ANDAMENTO — $sitesNoLote/$loteTamanho SITES NO LOTE';
-      subtitulo = faltam > 0
-          ? 'Faltam $faltam sites • Toque para novo adiantamento'
-          : 'Toque para novo adiantamento ou pagamento';
+      final semCobertura = emp!.sitesElegiveisSemCoberturaAdiantamento;
+      if (semCobertura == 0) {
+        gradient = AppTheme.successGradient;
+        statusIcon = Icons.verified;
+        titulo = 'TODOS OS CPS COBERTOS';
+        subtitulo = 'Nao ha lote pendente no momento. Aguarde novos sites concluidos.';
+      } else {
+        gradient = AppTheme.accentGradient;
+        statusIcon = Icons.trending_up;
+        final sitesNoLote = emp!.sitesNoLoteAtual;
+        final loteTamanho = emp!.sitesPorLoteAtual;
+        final faltam = emp!.sitesAteLoteAtual;
+        titulo = 'EM ANDAMENTO — $sitesNoLote/$loteTamanho SITES NO LOTE';
+        subtitulo = faltam > 0
+            ? 'Faltam $faltam sites • Toque para novo adiantamento'
+            : 'Toque para novo adiantamento ou pagamento';
+      }
     } else {
       gradient = AppTheme.primaryGradient;
       statusIcon = Icons.work;
@@ -1646,86 +1936,16 @@ class _DashboardScreenState extends State<DashboardScreen>
       );
     } else if (emp!.precisaSolicitarAdiantamento) {
       final numAdiant = emp!.adiantamentos.length + 1;
+      final sitesSemCobertura = emp!.sitesElegiveisSemCoberturaAdiantamento;
       _mostrarDialogAdiantamento(
         numero: numAdiant,
-        descricao: 'Lote de ${emp!.sitesPorLote} sites concluído! Registre o $numAdiant° adiantamento de ${(emp!.percentualAdiantamento * 100).toStringAsFixed(0)}% do lote.',
+        descricao: sitesSemCobertura == emp!.sitesPorLote
+            ? 'Lote de ${emp!.sitesPorLote} sites concluído! Registre o $numAdiant° adiantamento de ${(emp!.percentualAdiantamento * 100).toStringAsFixed(0)}% do lote.'
+            : 'Existem $sitesSemCobertura ${sitesSemCobertura == 1 ? 'site novo sem cobertura' : 'sites novos sem cobertura'}. Registre o $numAdiant° adiantamento para cobrir esse novo lote operacional.',
         isPrimeiro: false,
       );
     } else {
-      // Mostrar opções: Novo Adiantamento ou Pagamento Final
-      final temAdiantamentos = emp!.adiantamentos.isNotEmpty;
-      if (temAdiantamentos && emp!.tipoAdiantamento == TipoAdiantamento.percentualPorLote) {
-        showModalBottomSheet(
-          context: context,
-          shape: const RoundedRectangleBorder(
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          builder: (ctx) => SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 40,
-                    height: 4,
-                    margin: const EdgeInsets.only(bottom: 20),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[300],
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                  const Text(
-                    'O que deseja fazer?',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 16),
-                  ListTile(
-                    leading: Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: AppTheme.warningColor.withAlpha(20),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(Icons.rocket_launch, color: AppTheme.warningColor),
-                    ),
-                    title: const Text('Novo Adiantamento', style: TextStyle(fontWeight: FontWeight.w600)),
-                    subtitle: const Text('Registrar adiantamento para um novo lote de sites'),
-                    onTap: () {
-                      Navigator.pop(ctx);
-                      final numAdiant = emp!.adiantamentos.length + 1;
-                      _mostrarDialogAdiantamento(
-                        numero: numAdiant,
-                        descricao: 'Registre o $numAdiant° adiantamento. Escolha a quantidade de sites deste lote.',
-                        isPrimeiro: false,
-                      );
-                    },
-                  ),
-                  const Divider(height: 1),
-                  ListTile(
-                    leading: Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: AppTheme.successColor.withAlpha(20),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(Icons.payment, color: AppTheme.successColor),
-                    ),
-                    title: const Text('Confirmar Pagamento Final', style: TextStyle(fontWeight: FontWeight.w600)),
-                    subtitle: const Text('Marcar a demanda como paga'),
-                    onTap: () {
-                      Navigator.pop(ctx);
-                      _mostrarDialogPagamentoFinal();
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      } else {
-        _mostrarDialogPagamentoFinal();
-      }
+      _mostrarDialogPagamentoFinal();
     }
   }
 
@@ -2285,6 +2505,14 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   Widget _buildValoresFinanceiros() {
+    final totalAdiantamentos = emp!.totalAdiantamentos;
+    final receberComAdiantSobreConcluidos = emp!.valorReceberComAdiantamento;
+    final projecaoFinalComAdiant =
+        (emp!.estimativaTotal - totalAdiantamentos) > 0
+            ? (emp!.estimativaTotal - totalAdiantamentos)
+            : 0.0;
+    final saldoLiquidoAtual = emp!.valorReceberPendenteComAdiantamento;
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -2298,21 +2526,28 @@ class _DashboardScreenState extends State<DashboardScreen>
                   style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.primaryColor)),
             ]),
             const Divider(height: 24),
-            _buildLinhaValor('Estimativa Total', emp!.estimativaTotal, Icons.trending_up, AppTheme.primaryColor),
+            _buildLinhaValorDestaque(
+              'Valor total de todos os sites',
+              emp!.estimativaTotal,
+              AppTheme.accentGradient,
+            ),
+            const SizedBox(height: 8),
+            _buildLinhaValorDestaque(
+              'Valor sem desconto de adiantamento',
+              emp!.valorReceberSemAdiantamento,
+              AppTheme.successGradient,
+            ),
+            const SizedBox(height: 14),
             _buildLinhaValor('Valor Ganho (Concluídos)', emp!.valorGanho, Icons.check_circle_outline, AppTheme.successColor),
             _buildLinhaValor('Valor Perdido (Não Concl.)', emp!.valorPerdido, Icons.cancel_outlined, AppTheme.errorColor),
             _buildLinhaValor('Valor Aguardando', emp!.valorPendente, Icons.schedule, AppTheme.warningColor),
             const Divider(height: 24),
-            _buildLinhaValor('Total Adiantamentos', emp!.totalAdiantamentos, Icons.payments, Colors.blue),
-            _buildLinhaValor('Lançamentos descontáveis', emp!.totalLancamentosDescontaveis, Icons.remove_circle_outline, AppTheme.errorColor),
-            _buildLinhaValor('Lançamentos não descontáveis', emp!.totalLancamentosNaoDescontaveis, Icons.add_circle_outline, AppTheme.successColor),
-            _buildLinhaValor('Lançamentos previstos', emp!.totalLancamentosPrevistos, Icons.schedule, AppTheme.warningColor),
-            const Divider(height: 24),
-            _buildLinhaValorDestaque('A Receber (com adiant.)', emp!.valorReceberComAdiantamento, AppTheme.successGradient),
+            _buildLinhaValor('Total de adiantamentos (solicitados)', totalAdiantamentos, Icons.payments, Colors.blue),
+            _buildLinhaValorDestaque('A receber sobre concluídos (com adiant.)', receberComAdiantSobreConcluidos, AppTheme.successGradient),
             const SizedBox(height: 8),
-            _buildLinhaValorDestaque('A Receber (sem adiant.)', emp!.valorReceberSemAdiantamento, AppTheme.accentGradient),
+            _buildLinhaValorDestaque('Projeção final\n(todos os sites - adiant.)', projecaoFinalComAdiant, AppTheme.accentGradient),
             const SizedBox(height: 8),
-            _buildLinhaValorDestaque('Saldo com lançamentos', emp!.saldoFinanceiroComLancamentos, AppTheme.primaryGradient),
+            _buildLinhaValorDestaque('Saldo líquido atual\n(desconta CPS recebidos)', saldoLiquidoAtual, AppTheme.primaryGradient),
           ],
         ),
       ),
@@ -2346,6 +2581,16 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   Widget _buildReferenciaLote() {
+    final lotesHistoricos = emp!.adiantamentos
+        .map((a) => a.sitesPorLote)
+        .where((lote) => lote > 0)
+        .toSet()
+        .toList()
+      ..sort();
+    final lotesTexto = lotesHistoricos.isEmpty
+        ? 'Nenhum CPS registrado ainda'
+        : lotesHistoricos.map((lote) => '$lote').join(', ');
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -2355,9 +2600,18 @@ class _DashboardScreenState extends State<DashboardScreen>
             Row(children: [
               const Icon(Icons.calculate, color: AppTheme.primaryColor, size: 24),
               const SizedBox(width: 8),
-              Text('Referência: Lote de ${emp!.sitesPorLote} Sites',
+              Text('Referência atual: Lote de ${emp!.sitesPorLote} sites',
                   style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.primaryColor)),
             ]),
+            const SizedBox(height: 6),
+            Text(
+              'Lotes já registrados nos CPS: $lotesTexto',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey[700],
+              ),
+            ),
             const Divider(height: 24),
             _buildInfoTile('Valor Total (${emp!.sitesPorLote} × ${_formatCurrency(emp!.valorPorSite)})',
                 _formatCurrency(emp!.valorTotalLote), Icons.attach_money),
@@ -2405,18 +2659,31 @@ class _DashboardScreenState extends State<DashboardScreen>
             _buildBarraProgresso('Progresso Geral', emp!.progressoGeral, AppTheme.primaryColor),
             const SizedBox(height: 16),
             if (emp!.tipoAdiantamento == TipoAdiantamento.percentualPorLote) ...[
-              _buildBarraProgresso('Lote p/ Próximo Adiantamento', emp!.progressoLote, AppTheme.secondaryColor),
-              const SizedBox(height: 6),
-              Text(
-                emp!.sitesAteLoteAtual > 0
-                    ? 'Faltam ${emp!.sitesAteLoteAtual} sites para o próximo adiantamento'
-                    : '🎉 Lote completo! Solicite o adiantamento.',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: emp!.sitesAteLoteAtual > 0 ? Colors.grey[600] : AppTheme.successColor,
-                  fontWeight: emp!.sitesAteLoteAtual > 0 ? FontWeight.normal : FontWeight.bold,
+              if (emp!.sitesElegiveisSemCoberturaAdiantamento == 0) ...[
+                _buildBarraProgresso('Lote p/ Próximo Adiantamento', 1.0, AppTheme.successColor),
+                const SizedBox(height: 6),
+                const Text(
+                  'Todos os lotes atuais estao cobertos por CPS registrados.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppTheme.successColor,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
+              ] else ...[
+                _buildBarraProgresso('Lote p/ Próximo Adiantamento', emp!.progressoLote, AppTheme.secondaryColor),
+                const SizedBox(height: 6),
+                Text(
+                  emp!.sitesAteLoteAtual > 0
+                      ? 'Faltam ${emp!.sitesAteLoteAtual} sites para o próximo adiantamento'
+                      : '🎉 Lote completo! Solicite o adiantamento.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: emp!.sitesAteLoteAtual > 0 ? Colors.grey[600] : AppTheme.successColor,
+                    fontWeight: emp!.sitesAteLoteAtual > 0 ? FontWeight.normal : FontWeight.bold,
+                  ),
+                ),
+              ],
             ],
           ],
         ),
@@ -2471,10 +2738,13 @@ class _DashboardScreenState extends State<DashboardScreen>
             _buildLinhaValor('Lançamentos descontáveis', ctrl.totalLancamentosDescontaveisGlobal, Icons.remove_circle_outline, AppTheme.errorColor),
             _buildLinhaValor('Lançamentos não descontáveis', ctrl.totalLancamentosNaoDescontaveisGlobal, Icons.add_circle_outline, AppTheme.successColor),
             _buildLinhaValor('Lançamentos previstos', ctrl.totalLancamentosPrevistosGlobal, Icons.schedule, AppTheme.warningColor),
+            _buildLinhaValor('Pendente no histórico', ctrl.valorReceberHistoricoGlobalComLancamentos, Icons.history, Colors.deepOrange),
             const Divider(height: 20),
             _buildLinhaValorDestaque('A Receber Total', ctrl.valorReceberGlobal, AppTheme.successGradient),
             const SizedBox(height: 8),
-            _buildLinhaValorDestaque('Saldo total com lançamentos', ctrl.valorReceberGlobalComLancamentos, AppTheme.primaryGradient),
+            _buildLinhaValorDestaque('Saldo total com lançamentos (ativas)', ctrl.valorReceberGlobalComLancamentos, AppTheme.primaryGradient),
+            const SizedBox(height: 8),
+            _buildLinhaValorDestaque('Saldo total incluindo histórico', ctrl.valorReceberTotalComHistorico, AppTheme.accentGradient),
             const SizedBox(height: 12),
             ...ctrl.empresas.map((e) => Container(
               margin: const EdgeInsets.only(bottom: 6),
@@ -2511,7 +2781,7 @@ class _DashboardScreenState extends State<DashboardScreen>
             color: destaque ? AppTheme.primaryColor : Colors.grey[700],
           )),
           Text(
-            '${isNegativo ? "- " : ""}R\$ ${valor.abs().toStringAsFixed(2).replaceAll('.', ',')}',
+            '${isNegativo ? "- " : ""}${_formatCurrency(valor.abs())}',
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.bold,
@@ -2650,7 +2920,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   String _formatCurrency(double value) {
-    return 'R\$ ${value.toStringAsFixed(2).replaceAll('.', ',')}';
+    return CurrencyUtils.formatBRL(value);
   }
 
   String _formatDate(DateTime date) {

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'site_model.dart';
 import 'adiantamento_model.dart';
 import 'lancamento_financeiro_model.dart';
+import '../utils/currency_utils.dart';
 
 enum TipoAdiantamento {
   percentualPorLote,   // Ex: Prencell - 40% a cada 20 sites
@@ -49,6 +50,8 @@ class EmpresaModel {
 
   // Cálculos
   int get totalSites => sites.length;
+    int get totalSitesElegiveisAdiantamento =>
+      sites.where((s) => s.participaAdiantamento).length;
   int get sitesConcluidos => sites.where((s) => s.isConcluido).length;
   int get sitesConcluidosElegiveisAdiantamento =>
       sites.where((s) => s.isConcluido && s.participaAdiantamento).length;
@@ -94,11 +97,44 @@ class EmpresaModel {
         return sum + a.sitesPorLote;
       });
 
+  int get sitesElegiveisSemCoberturaAdiantamento {
+    final restante = totalSitesElegiveisAdiantamento - totalSitesCobertosAdiantamentos;
+    return restante > 0 ? restante : 0;
+  }
+
+  double valorReceberDoCps(AdiantamentoModel adiantamento) {
+    final sitesConsiderados = adiantamento.encerrado
+        ? (adiantamento.sitesConcluidosNoEncerramento ?? adiantamento.sitesPorLote)
+        : adiantamento.sitesPorLote;
+    final valor = (sitesConsiderados * valorPorSite) - adiantamento.valor;
+    return valor > 0 ? valor : 0.0;
+  }
+
+  double get totalRecebidoCps => adiantamentos
+      .where((a) => a.foiPago)
+      .fold(0.0, (sum, a) => sum + (a.valorPago > 0 ? a.valorPago : valorReceberDoCps(a)));
+
+  bool get temLoteCompletoSemCoberturaAdiantamento {
+    if (tipoAdiantamento != TipoAdiantamento.percentualPorLote) return false;
+    if (sitesPorLote <= 0) return false;
+    return sitesElegiveisSemCoberturaAdiantamento >= sitesPorLote;
+  }
+
   double get valorReceberComAdiantamento => valorGanho - totalAdiantamentos;
   double get valorReceberSemAdiantamento => valorGanho;
 
+  double get valorReceberPendenteComAdiantamento {
+    final pendente = valorReceberComAdiantamento - totalRecebidoCps - valorPago;
+    return pendente > 0 ? pendente : 0.0;
+  }
+
   double get saldoFinanceiroComLancamentos =>
       valorGanho + totalLancamentosNaoDescontaveis - totalAdiantamentos - totalLancamentosDescontaveis;
+
+  double get saldoFinanceiroPendenteComLancamentos {
+    final pendente = saldoFinanceiroComLancamentos - totalRecebidoCps - valorPago;
+    return pendente > 0 ? pendente : 0.0;
+  }
 
     double get saldoFinanceiroPrevistoComLancamentos =>
       valorGanho +
@@ -152,8 +188,7 @@ class EmpresaModel {
   bool get precisaSolicitarAdiantamento {
     if (tipoAdiantamento == TipoAdiantamento.semAdiantamento) return false;
     if (tipoAdiantamento == TipoAdiantamento.percentualPorLote) {
-      final totalCoberto = totalSitesCobertosAdiantamentos;
-      return sitesConcluidosElegiveisAdiantamento >= totalCoberto;
+      return temLoteCompletoSemCoberturaAdiantamento;
     }
     return false;
   }
@@ -179,9 +214,9 @@ class EmpresaModel {
       case TipoAdiantamento.percentualPorLote:
         return '${(percentualAdiantamento * 100).toStringAsFixed(0)}% a cada $sitesPorLote sites';
       case TipoAdiantamento.valorFixoSemanal:
-        return 'R\$ ${valorAdiantamentoFixo.toStringAsFixed(2).replaceAll('.', ',')} por semana';
+        return '${CurrencyUtils.formatBRL(valorAdiantamentoFixo)} por semana';
       case TipoAdiantamento.valorFixoUnico:
-        return 'R\$ ${valorAdiantamentoFixo.toStringAsFixed(2).replaceAll('.', ',')} (valor único)';
+        return '${CurrencyUtils.formatBRL(valorAdiantamentoFixo)} (valor único)';
       case TipoAdiantamento.semAdiantamento:
         return 'Sem adiantamento';
     }

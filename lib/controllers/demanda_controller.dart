@@ -10,6 +10,7 @@ import '../models/lancamento_financeiro_model.dart';
 import '../models/demanda_geral_model.dart';
 import '../models/demanda_evento_model.dart';
 import '../models/relatorio_model.dart';
+import '../utils/currency_utils.dart';
 
 class DemandaController extends ChangeNotifier {
   final DriveBackupService _driveBackupService = DriveBackupService();
@@ -21,6 +22,7 @@ class DemandaController extends ChangeNotifier {
   RelatorioConfig _relatorioConfig = RelatorioConfig();
   String? _mensagemSistemaPendente;
   String? _nomeDemandaSugerido;
+  String? _responsavelFechamentoSugerido;
   String? _demandaReabertaId;
   Map<String, String> _ordenacaoLancamentosPorEmpresa = {};
     Map<String, String> _filtroLancamentosPorEmpresa = {};
@@ -66,6 +68,7 @@ class DemandaController extends ChangeNotifier {
   RelatorioConfig get relatorioConfig => _relatorioConfig;
   bool get temDemandaAtiva => _empresas.isNotEmpty || _relatorios.isNotEmpty;
   String? get nomeDemandaSugerido => _nomeDemandaSugerido;
+  String? get responsavelFechamentoSugerido => _responsavelFechamentoSugerido;
 
   String? consumirMensagemSistemaPendente() {
     final msg = _mensagemSistemaPendente;
@@ -128,9 +131,110 @@ class DemandaController extends ChangeNotifier {
       double get totalLancamentosPrevistosGlobal =>
         _empresas.fold(0.0, (sum, e) => sum + e.totalLancamentosPrevistos);
   double get valorReceberGlobal =>
-      _empresas.fold(0.0, (sum, e) => sum + e.valorReceberComAdiantamento);
+      _empresas.fold(0.0, (sum, e) => sum + e.valorReceberPendenteComAdiantamento);
     double get valorReceberGlobalComLancamentos =>
-      _empresas.fold(0.0, (sum, e) => sum + e.saldoFinanceiroComLancamentos);
+      _empresas.fold(0.0, (sum, e) => sum + e.saldoFinanceiroPendenteComLancamentos);
+  double get valorReceberHistoricoGlobalComLancamentos =>
+      _demandasArquivadas
+          .where((d) => d.id != _demandaReabertaId)
+          .fold(0.0, (sumDemandas, demanda) {
+        final pendenteDemanda = demanda.empresas
+            .fold(0.0, (sumEmpresas, empresa) {
+          final pendente = empresa.saldoFinanceiroPendenteComLancamentos;
+          return sumEmpresas + (pendente > 0 ? pendente : 0.0);
+        });
+        return sumDemandas + pendenteDemanda;
+      });
+  double get valorReceberTotalComHistorico =>
+      valorReceberGlobalComLancamentos + valorReceberHistoricoGlobalComLancamentos;
+
+  String _normalizarNomeEmpresa(String nome) {
+    var normalizado = nome.trim().toLowerCase();
+    normalizado = normalizado.replaceAll(RegExp(r'\s*\(novo ciclo.*\)'), '');
+    normalizado = normalizado.replaceAll(RegExp(r'\s+'), ' ');
+    return normalizado.trim();
+  }
+
+  double valorReceberEmpresaComHistoricoPorNome(String nomeEmpresa) {
+    final nomeNormalizado = _normalizarNomeEmpresa(nomeEmpresa);
+
+    final totalAtivo = _empresas
+        .where((e) => _normalizarNomeEmpresa(e.nome) == nomeNormalizado)
+        .fold(0.0, (sum, e) => sum + e.saldoFinanceiroPendenteComLancamentos);
+
+    final totalHistorico = _demandasArquivadas
+        .where((d) => d.id != _demandaReabertaId)
+        .fold(0.0, (sumDemandas, demanda) {
+      final subtotal = demanda.empresas
+          .where((e) => _normalizarNomeEmpresa(e.nome) == nomeNormalizado)
+          .fold(0.0, (sumEmpresas, e) => sumEmpresas + e.saldoFinanceiroPendenteComLancamentos);
+      return sumDemandas + subtotal;
+    });
+
+    return totalAtivo + totalHistorico;
+  }
+
+  String _assinaturaDemanda({
+    required List<EmpresaModel> empresas,
+    required List<RelatorioDiario> relatorios,
+  }) {
+    return jsonEncode({
+      'empresas': empresas.map((e) => e.toJson()).toList(),
+      'relatorios': relatorios.map((r) => r.toJson()).toList(),
+    });
+  }
+
+  void _reconciliarSugestoesDemandaReaberta() {
+    if (_empresas.isEmpty && _relatorios.isEmpty) {
+      _nomeDemandaSugerido = null;
+      _responsavelFechamentoSugerido = null;
+      _demandaReabertaId = null;
+      return;
+    }
+
+    final nomeAtual = (_nomeDemandaSugerido ?? '').trim();
+    final responsavelAtual = (_responsavelFechamentoSugerido ?? '').trim();
+
+    if (_demandaReabertaId != null) {
+      final demandaPorId = _demandasArquivadas.where((d) => d.id == _demandaReabertaId);
+      if (demandaPorId.isNotEmpty) {
+        final d = demandaPorId.first;
+        if (nomeAtual.isEmpty) {
+          _nomeDemandaSugerido = d.nome;
+        }
+        if (responsavelAtual.isEmpty && d.responsavelFechamento.trim().isNotEmpty) {
+          _responsavelFechamentoSugerido = d.responsavelFechamento.trim();
+        }
+        return;
+      }
+    }
+
+    if (nomeAtual.isNotEmpty && responsavelAtual.isNotEmpty) {
+      return;
+    }
+
+    final assinaturaAtiva = _assinaturaDemanda(
+      empresas: _empresas,
+      relatorios: _relatorios,
+    );
+
+    for (final demanda in _demandasArquivadas) {
+      final assinaturaHistorico = _assinaturaDemanda(
+        empresas: demanda.empresas,
+        relatorios: demanda.relatorios,
+      );
+      if (assinaturaAtiva == assinaturaHistorico) {
+        _demandaReabertaId = demanda.id;
+        if (nomeAtual.isEmpty) {
+          _nomeDemandaSugerido = demanda.nome;
+        }
+        if (responsavelAtual.isEmpty && demanda.responsavelFechamento.trim().isNotEmpty) {
+          _responsavelFechamentoSugerido = demanda.responsavelFechamento.trim();
+        }
+        return;
+      }
+    }
+  }
 
   void selecionarEmpresa(int index) {
     if (index >= 0 && index < _empresas.length) {
@@ -142,41 +246,40 @@ class DemandaController extends ChangeNotifier {
   Future<void> init() async {
     final prefs = await SharedPreferences.getInstance();
     final empresasJson = prefs.getString('empresas_v2');
+    _nomeDemandaSugerido = prefs.getString('nome_demanda_sugerido');
+    _responsavelFechamentoSugerido = prefs.getString('responsavel_fechamento_sugerido');
+    _demandaReabertaId = prefs.getString('demanda_reaberta_id');
 
     if (empresasJson != null) {
       _empresas = EmpresaModel.decodeList(empresasJson);
     } else {
-      // Migrar dados antigos ou criar Prencell padrão
+      // Migrar dados antigos. Se não houver legado, iniciar vazio.
       final sitesJson = prefs.getString('sites');
       final adiantamentosJson = prefs.getString('adiantamentos');
 
-      List<SiteModel> sites;
-      List<AdiantamentoModel> adiantamentos;
+      if (sitesJson != null || adiantamentosJson != null) {
+        final sites = sitesJson != null
+            ? SiteModel.decodeList(sitesJson)
+            : <SiteModel>[];
+        final adiantamentos = adiantamentosJson != null
+            ? AdiantamentoModel.decodeList(adiantamentosJson)
+            : <AdiantamentoModel>[];
 
-      if (sitesJson != null) {
-        sites = SiteModel.decodeList(sitesJson);
+        _empresas = [
+          EmpresaModel(
+            id: 'empresa_migrada_001',
+            nome: 'Empresa Migrada',
+            valorPorSite: 600.0,
+            sites: sites,
+            adiantamentos: adiantamentos,
+            tipoAdiantamento: TipoAdiantamento.percentualPorLote,
+            percentualAdiantamento: 0.40,
+            sitesPorLote: 20,
+          ),
+        ];
       } else {
-        sites = siteIdsPrEncell.map((id) => SiteModel(siteId: id)).toList();
+        _empresas = [];
       }
-
-      if (adiantamentosJson != null) {
-        adiantamentos = AdiantamentoModel.decodeList(adiantamentosJson);
-      } else {
-        adiantamentos = [];
-      }
-
-      _empresas = [
-        EmpresaModel(
-          id: 'prencell_001',
-          nome: 'Prencell',
-          valorPorSite: 600.0,
-          sites: sites,
-          adiantamentos: adiantamentos,
-          tipoAdiantamento: TipoAdiantamento.percentualPorLote,
-          percentualAdiantamento: 0.40,
-          sitesPorLote: 20,
-        ),
-      ];
     }
 
     if (_empresaSelecionadaIndex >= _empresas.length) {
@@ -301,11 +404,16 @@ class DemandaController extends ChangeNotifier {
       }
     }
 
+    _reconciliarSugestoesDemandaReaberta();
+
     // Reconciliar lotes antigos usando datas reais dos sites concluidos elegiveis.
     var houveReconciliacao = false;
     for (final emp in _empresas) {
       final mudou = _recalcularFechamentoAdiantamentosPorDatas(emp);
       if (mudou) houveReconciliacao = true;
+
+      final corrigiuPagoLegado = _corrigirPagamentosCpsAutomaticosLegado(emp);
+      if (corrigiuPagoLegado) houveReconciliacao = true;
     }
     if (houveReconciliacao) {
       await _salvar();
@@ -314,9 +422,49 @@ class DemandaController extends ChangeNotifier {
     notifyListeners();
   }
 
+  bool _mesmaDataCalendario(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+
+  bool _corrigirPagamentosCpsAutomaticosLegado(EmpresaModel emp) {
+    var alterou = false;
+    for (final ad in emp.adiantamentos) {
+      if (!ad.foiPago) continue;
+
+      final observacaoLegado = ad.observacao.trim().startsWith('1° Adiantamento');
+      final dataPagamentoIgualCadastro = ad.dataPagamento != null &&
+          _mesmaDataCalendario(ad.dataPagamento!, ad.data);
+      final valorPagoIgualAoAdiantamento = (ad.valorPago - ad.valor).abs() < 0.01;
+
+      if (observacaoLegado && dataPagamentoIgualCadastro && valorPagoIgualAoAdiantamento) {
+        ad.foiPago = false;
+        alterou = true;
+      }
+    }
+    return alterou;
+  }
+
   Future<void> _salvar() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('empresas_v2', EmpresaModel.encodeList(_empresas));
+    if (_nomeDemandaSugerido != null) {
+      await prefs.setString('nome_demanda_sugerido', _nomeDemandaSugerido!);
+    } else {
+      await prefs.remove('nome_demanda_sugerido');
+    }
+    if (_responsavelFechamentoSugerido != null) {
+      await prefs.setString(
+        'responsavel_fechamento_sugerido',
+        _responsavelFechamentoSugerido!,
+      );
+    } else {
+      await prefs.remove('responsavel_fechamento_sugerido');
+    }
+    if (_demandaReabertaId != null) {
+      await prefs.setString('demanda_reaberta_id', _demandaReabertaId!);
+    } else {
+      await prefs.remove('demanda_reaberta_id');
+    }
     _agendarAutoBackupNuvem();
   }
 
@@ -1003,9 +1151,6 @@ class DemandaController extends ChangeNotifier {
       identificacao: identificacao.trim(),
       observacao: '1° Adiantamento (${(emp.percentualAdiantamento * 100).toStringAsFixed(0)}%)',
       sitesPorLote: lote,
-      foiPago: true,
-      dataPagamento: data,
-      valorPago: valor,
     ));
 
     _encerrarAutomaticamenteAdiantamentoAtual(dataBase: data);
@@ -1059,14 +1204,36 @@ class DemandaController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void reabrirAdiantamento(int index) {
+  void reabrirAdiantamento(
+    int index, {
+    bool manterDataAtual = true,
+    DateTime? novaDataCps,
+  }) {
     final emp = empresaAtual;
     if (emp == null) return;
     if (index < 0 || index >= emp.adiantamentos.length) return;
-    final ad = emp.adiantamentos[index];
-    ad.encerrado = false;
-    ad.dataEncerramento = null;
-    ad.sitesConcluidosNoEncerramento = null;
+    final atual = emp.adiantamentos[index];
+    final dataFinal = manterDataAtual
+        ? atual.data
+        : DateTime(
+            (novaDataCps ?? atual.data).year,
+            (novaDataCps ?? atual.data).month,
+            (novaDataCps ?? atual.data).day,
+          );
+
+    emp.adiantamentos[index] = AdiantamentoModel(
+      valor: atual.valor,
+      data: dataFinal,
+      identificacao: atual.identificacao,
+      observacao: atual.observacao,
+      sitesPorLote: atual.sitesPorLote,
+      foiPago: false,
+      dataPagamento: null,
+      valorPago: 0.0,
+      encerrado: false,
+      dataEncerramento: null,
+      sitesConcluidosNoEncerramento: null,
+    );
     _salvar();
     notifyListeners();
   }
@@ -1099,8 +1266,6 @@ class DemandaController extends ChangeNotifier {
     if (emp == null) return;
     if (index < 0 || index >= emp.adiantamentos.length) return;
     emp.adiantamentos[index].foiPago = false;
-    emp.adiantamentos[index].dataPagamento = null;
-    emp.adiantamentos[index].valorPago = 0.0;
     _salvar();
     notifyListeners();
   }
@@ -1413,7 +1578,7 @@ class DemandaController extends ChangeNotifier {
 
   // === DEMANDA GERAL (CICLO) ===
 
-  Future<void> concluirDemandaGeral({
+  Future<bool> concluirDemandaGeral({
     String? nome,
     String responsavel = '',
     String observacao = '',
@@ -1421,7 +1586,7 @@ class DemandaController extends ChangeNotifier {
   }) async {
     final now = DateTime.now();
     final existeConteudo = _empresas.isNotEmpty || _relatorios.isNotEmpty;
-    if (!existeConteudo) return;
+    if (!existeConteudo) return false;
 
     final nomeInformado = nome?.trim() ?? '';
     final sugestaoValida = (_nomeDemandaSugerido ?? '').trim();
@@ -1429,7 +1594,8 @@ class DemandaController extends ChangeNotifier {
         ? nomeInformado
         : (usarNomeSugerido && sugestaoValida.isNotEmpty)
             ? sugestaoValida
-            : 'Demanda ${_formatDate(now)}';
+            : '';
+    if (nomeFinal.isEmpty) return false;
 
     final empresasSnapshot = EmpresaModel.decodeList(
       EmpresaModel.encodeList(_empresas),
@@ -1473,15 +1639,21 @@ class DemandaController extends ChangeNotifier {
     _relatorios = [];
     _empresaSelecionadaIndex = 0;
     _nomeDemandaSugerido = null;
+    _responsavelFechamentoSugerido = null;
     _demandaReabertaId = null;
 
     await _salvar();
     await _salvarRelatorios();
     await _salvarDemandasArquivadas();
     notifyListeners();
+    return true;
   }
 
-  Future<bool> reabrirDemandaGeral(String demandaId) async {
+  Future<bool> reabrirDemandaGeral(
+    String demandaId, {
+    bool manterDatasOriginais = true,
+    DateTime? novaDataBase,
+  }) async {
     final demanda = _demandasArquivadas.where((d) => d.id == demandaId);
     if (demanda.isEmpty) return false;
     final selecionada = demanda.first;
@@ -1492,8 +1664,46 @@ class DemandaController extends ChangeNotifier {
     _relatorios = RelatorioDiario.decodeList(
       RelatorioDiario.encodeList(selecionada.relatorios),
     );
+
+    if (!manterDatasOriginais) {
+      final base = novaDataBase ?? DateTime.now();
+      final dataNormalizada = DateTime(base.year, base.month, base.day);
+
+      for (final empresa in _empresas) {
+        for (final site in empresa.sites) {
+          if (site.isConcluido) {
+            site.dataConclusao = dataNormalizada;
+          }
+        }
+
+        for (final adiantamento in empresa.adiantamentos) {
+          if (adiantamento.encerrado) {
+            adiantamento.dataEncerramento = dataNormalizada;
+          }
+          if (adiantamento.foiPago) {
+            adiantamento.dataPagamento = dataNormalizada;
+          }
+        }
+
+        _recalcularFechamentoAdiantamentosPorDatas(empresa);
+      }
+
+      for (final relatorio in _relatorios) {
+        relatorio.data = dataNormalizada;
+        for (final item in relatorio.sites) {
+          if (item.feito) {
+            item.dataExecucao = dataNormalizada;
+          }
+        }
+      }
+    }
+
     _empresaSelecionadaIndex = _empresas.isEmpty ? 0 : 0;
     _nomeDemandaSugerido = selecionada.nome;
+    _responsavelFechamentoSugerido =
+      selecionada.responsavelFechamento.trim().isNotEmpty
+        ? selecionada.responsavelFechamento.trim()
+        : null;
     _demandaReabertaId = selecionada.id;
     _registrarEventoDemanda(
       selecionada.id,
@@ -1547,6 +1757,7 @@ class DemandaController extends ChangeNotifier {
     _relatorios = [];
     _empresaSelecionadaIndex = _empresas.isEmpty ? 0 : 0;
     _nomeDemandaSugerido = null;
+    _responsavelFechamentoSugerido = null;
     _demandaReabertaId = null;
 
     await _salvar();
@@ -1564,6 +1775,7 @@ class DemandaController extends ChangeNotifier {
     if (_demandaReabertaId == demandaId) {
       _demandaReabertaId = null;
       _nomeDemandaSugerido = null;
+      _responsavelFechamentoSugerido = null;
     }
 
     await _salvarDemandasArquivadas();
@@ -1586,6 +1798,27 @@ class DemandaController extends ChangeNotifier {
         .toList();
   }
 
+  /// Nomes únicos de empresas presentes em qualquer demanda arquivada.
+  List<String> get empresasNoHistorico {
+    final nomes = <String>{};
+    for (final d in _demandasArquivadas) {
+      for (final e in d.empresas) {
+        if (e.nome.isNotEmpty) nomes.add(e.nome);
+      }
+    }
+    return nomes.toList()..sort();
+  }
+
+  /// Demandas arquivadas que contêm a empresa com [nomeEmpresa].
+  List<DemandaGeralModel> demandasArquivadasPorEmpresa(String nomeEmpresa) {
+    return _demandasArquivadas
+        .where((d) => d.empresas.any((e) => e.nome == nomeEmpresa))
+        .toList();
+  }
+
+  Future<bool> verificarConexaoDrive() => _driveBackupService.verificarConexao();
+  Future<bool> conectarDriveInterativo() => _driveBackupService.conectarInterativo();
+
   // === BACKUP E RESTAURAÇÃO ===
 
   String gerarBackupJson() {
@@ -1597,6 +1830,10 @@ class DemandaController extends ChangeNotifier {
       'demandasArquivadas': _demandasArquivadas.map((d) => d.toJson()).toList(),
       'eventosDemanda': _eventosDemanda.map((e) => e.toJson()).toList(),
       'relatorioConfig': _relatorioConfig.toJson(),
+      if (_nomeDemandaSugerido != null) 'nomeDemandaSugerido': _nomeDemandaSugerido,
+      if (_responsavelFechamentoSugerido != null)
+        'responsavelFechamentoSugerido': _responsavelFechamentoSugerido,
+      if (_demandaReabertaId != null) 'demandaReabertaId': _demandaReabertaId,
     };
     return jsonEncode(backup);
   }
@@ -1641,6 +1878,11 @@ class DemandaController extends ChangeNotifier {
       _eventosDemanda = eventosDemanda;
       _relatorioConfig = config;
       _empresaSelecionadaIndex = 0;
+      _nomeDemandaSugerido = backup['nomeDemandaSugerido'] as String?;
+        _responsavelFechamentoSugerido =
+          backup['responsavelFechamentoSugerido'] as String?;
+      _demandaReabertaId = backup['demandaReabertaId'] as String?;
+        _reconciliarSugestoesDemandaReaberta();
 
       await _salvar();
       await _salvarRelatorios();
@@ -1656,6 +1898,8 @@ class DemandaController extends ChangeNotifier {
 
   Future<void> limparDadosLocaisCompletos() async {
     final prefs = await SharedPreferences.getInstance();
+    _autoBackupDebounce?.cancel();
+    _autoBackupEmAndamento = false;
 
     await prefs.remove('empresas_v2');
     await prefs.remove('sites');
@@ -1664,6 +1908,9 @@ class DemandaController extends ChangeNotifier {
     await prefs.remove('demandas_arquivadas_v1');
     await prefs.remove('demanda_eventos_v1');
     await prefs.remove('relatorio_config');
+    await prefs.remove('nome_demanda_sugerido');
+    await prefs.remove('responsavel_fechamento_sugerido');
+    await prefs.remove('demanda_reaberta_id');
     await prefs.remove(_ordenacaoLancamentosKey);
     await prefs.remove(_filtroLancamentosKey);
     await prefs.remove(_filtroPlanosKey);
@@ -1676,6 +1923,9 @@ class DemandaController extends ChangeNotifier {
     _eventosDemanda = [];
     _relatorioConfig = RelatorioConfig();
     _empresaSelecionadaIndex = 0;
+    _nomeDemandaSugerido = null;
+    _responsavelFechamentoSugerido = null;
+    _demandaReabertaId = null;
     _ordenacaoLancamentosPorEmpresa = {};
     _filtroLancamentosPorEmpresa = {};
     _filtroPlanosPorEmpresa = {};
@@ -1854,7 +2104,7 @@ class DemandaController extends ChangeNotifier {
   }
 
   String _formatCurrency(double value) {
-    return 'R\$ ${value.toStringAsFixed(2).replaceAll('.', ',')}';
+    return CurrencyUtils.formatBRL(value);
   }
 
   String _formatDate(DateTime date) {

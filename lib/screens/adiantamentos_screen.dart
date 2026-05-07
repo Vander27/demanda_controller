@@ -3,6 +3,7 @@ import '../controllers/demanda_controller.dart';
 import '../models/empresa_model.dart';
 import '../models/lancamento_financeiro_model.dart';
 import '../theme/app_theme.dart';
+import '../utils/currency_utils.dart';
 
 class AdiantamentosScreen extends StatefulWidget {
   final DemandaController controller;
@@ -16,6 +17,24 @@ class AdiantamentosScreen extends StatefulWidget {
 class _AdiantamentosScreenState extends State<AdiantamentosScreen> {
   DemandaController get ctrl => widget.controller;
   EmpresaModel? get emp => ctrl.empresaAtual;
+
+  double get _valorGlobalReceberComHistorico => ctrl.valorReceberTotalComHistorico;
+
+  double get _valorHistoricoGlobalReceber =>
+      ctrl.valorReceberHistoricoGlobalComLancamentos;
+
+  double get _valorEmpresaAtualComHistorico =>
+      emp == null ? 0.0 : ctrl.valorReceberEmpresaComHistoricoPorNome(emp!.nome);
+
+  double get _valorGlobalReceberSemAdiantamento => ctrl.empresas.fold(
+        0.0,
+        (sum, empresa) => sum + empresa.valorReceberSemAdiantamento,
+      );
+
+  double get _totalGlobalAdiantado => ctrl.empresas.fold(
+        0.0,
+        (sum, empresa) => sum + empresa.totalAdiantamentos,
+      );
 
   @override
   void initState() {
@@ -453,18 +472,79 @@ class _AdiantamentosScreenState extends State<AdiantamentosScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          _buildResumoGlobalDemanda(),
+          const SizedBox(height: 16),
           _buildResumoAdiantamento(),
           const SizedBox(height: 16),
           _buildBotaoNovoAdiantamento(),
           const SizedBox(height: 16),
           _buildListaAdiantamentos(),
           const SizedBox(height: 16),
-          _buildResumoFinanceiroLancamentos(),
-          const SizedBox(height: 16),
           _buildListaPlanosParcelamento(),
           const SizedBox(height: 16),
           _buildListaLancamentosFinanceiros(),
         ],
+      ),
+    );
+  }
+
+  Widget _buildResumoGlobalDemanda() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(
+                  Icons.assessment_outlined,
+                  color: AppTheme.primaryColor,
+                  size: 24,
+                ),
+                const SizedBox(width: 8),
+                const Expanded(
+                  child: Text(
+                    'Resumo Global da Demanda',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.primaryColor,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '${ctrl.empresas.length} ${ctrl.empresas.length == 1 ? 'empresa ativa' : 'empresas ativas'}',
+              style: TextStyle(
+                color: Colors.grey[700],
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const Divider(height: 24),
+            _buildItemResumo(
+              'Total Adiantado na Demanda',
+              _formatCurrency(_totalGlobalAdiantado),
+              Icons.payments_outlined,
+              Colors.blue,
+            ),
+            _buildItemResumo(
+              'Total Global a Receber',
+              _formatCurrency(_valorGlobalReceberComHistorico),
+              Icons.account_balance_wallet_outlined,
+              AppTheme.successColor,
+            ),
+            _buildItemResumo(
+              'Ativas sem Desconto de Adiantamento',
+              _formatCurrency(_valorGlobalReceberSemAdiantamento),
+              Icons.stacked_line_chart,
+              AppTheme.accentColor,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -589,45 +669,12 @@ class _AdiantamentosScreenState extends State<AdiantamentosScreen> {
               Icons.monetization_on,
               AppTheme.successColor,
             ),
-            const Divider(height: 20),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                gradient: AppTheme.successGradient,
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Column(
-                children: [
-                  const Text(
-                    'VALOR A RECEBER',
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _formatCurrency(e.valorReceberComAdiantamento),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '(Descontando adiantamentos)',
-                    style: TextStyle(
-                      color: Colors.white.withAlpha(180),
-                      fontSize: 11,
-                    ),
-                  ),
-                ],
-              ),
+            _buildItemResumo(
+              'Saldo Pendente Atual (com CPS)',
+              _formatCurrency(e.saldoFinanceiroPendenteComLancamentos),
+              Icons.account_balance_wallet,
+              AppTheme.successColor,
             ),
-            const SizedBox(height: 10),
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(16),
@@ -676,7 +723,7 @@ class _AdiantamentosScreenState extends State<AdiantamentosScreen> {
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        '⚠️ Você completou ${e.sitesConcluidosElegiveisAdiantamento} sites elegíveis! Solicite um novo adiantamento.',
+                        '⚠️ Há ${e.sitesElegiveisSemCoberturaAdiantamento} sites elegíveis sem cobertura de adiantamento.',
                         style: const TextStyle(
                           fontWeight: FontWeight.w600,
                           fontSize: 13,
@@ -719,6 +766,13 @@ class _AdiantamentosScreenState extends State<AdiantamentosScreen> {
 
   Widget _buildBotaoNovoAdiantamento() {
     if (emp!.tipoAdiantamento == TipoAdiantamento.semAdiantamento) {
+      return const SizedBox.shrink();
+    }
+    final podeMostrarBotao =
+        emp!.tipoAdiantamento != TipoAdiantamento.percentualPorLote ||
+            emp!.adiantamentos.isEmpty ||
+            emp!.precisaSolicitarAdiantamento;
+    if (!podeMostrarBotao) {
       return const SizedBox.shrink();
     }
     return SizedBox(
@@ -1003,7 +1057,9 @@ class _AdiantamentosScreenState extends State<AdiantamentosScreen> {
               final totalConsiderado =
                   a.encerrado ? (a.sitesConcluidosNoEncerramento ?? a.sitesPorLote) : concluidosNoAdiantamento;
               final valorBrutoCps = totalConsiderado * e.valorPorSite;
-              final valorReceberCps = valorBrutoCps - a.valor;
+                final valorReceberCps = (valorBrutoCps - a.valor) > 0
+                  ? (valorBrutoCps - a.valor)
+                  : 0.0;
               final previsao = a.previsaoRecebimento;
               final diasPrevisao = previsao != null
                   ? previsao.difference(DateTime.now()).inDays
@@ -1078,6 +1134,14 @@ class _AdiantamentosScreenState extends State<AdiantamentosScreen> {
                                   color: Colors.grey[500],
                                 ),
                               ),
+                              if (e.tipoAdiantamento == TipoAdiantamento.percentualPorLote)
+                                Text(
+                                  'Acordo deste CPS: ${(e.percentualAdiantamento * 100).toStringAsFixed(0)}% a cada ${a.sitesPorLote} sites',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.grey[500],
+                                  ),
+                                ),
                               Text(
                                 'Andamento: $totalConsiderado/${a.sitesPorLote} sites',
                                 style: TextStyle(
@@ -1126,7 +1190,8 @@ class _AdiantamentosScreenState extends State<AdiantamentosScreen> {
                         Expanded(
                           child: a.encerrado
                               ? OutlinedButton.icon(
-                                  onPressed: () => ctrl.reabrirAdiantamento(i),
+                                  onPressed: () =>
+                                      _dialogReabrirAdiantamento(i, a),
                                   icon: const Icon(Icons.lock_open, size: 18),
                                   label: const Text('Reabrir'),
                                 )
@@ -1217,11 +1282,23 @@ class _AdiantamentosScreenState extends State<AdiantamentosScreen> {
                             Padding(
                               padding: const EdgeInsets.only(top: 4),
                               child: Text(
-                                'Valor pago registrado: ${_formatCurrency(a.valorPago > 0 ? a.valorPago : valorReceberCps)}',
+                                'Valor recebido registrado: ${_formatCurrency(a.valorPago > 0 ? a.valorPago : valorReceberCps)}',
                                 style: const TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,
                                   color: AppTheme.successColor,
+                                ),
+                              ),
+                            ),
+                          if (!a.foiPago)
+                            const Padding(
+                              padding: EdgeInsets.only(top: 4),
+                              child: Text(
+                                'Ainda não recebido. Use o botão "Marcar recebido".',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500,
+                                  color: AppTheme.warningColor,
                                 ),
                               ),
                             ),
@@ -1230,71 +1307,99 @@ class _AdiantamentosScreenState extends State<AdiantamentosScreen> {
                     ),
                     const SizedBox(height: 8),
                     // Status de pagamento
-                    Row(
-                      children: [
-                        Expanded(
-                          child: InkWell(
-                            onTap: () async {
-                              if (a.foiPago) {
-                                ctrl.desmarcarAdiantamentoPago(i);
-                              } else {
-                                await _dialogMarcarPagamentoAdiantamento(
-                                  i,
-                                  valorReceberCps,
-                                );
-                              }
-                            },
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final bool compact = constraints.maxWidth < 560;
+
+                        final statusWidget = Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: a.foiPago
+                                ? AppTheme.successColor.withAlpha(25)
+                                : AppTheme.warningColor.withAlpha(25),
                             borderRadius: BorderRadius.circular(8),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 10, vertical: 6),
-                              decoration: BoxDecoration(
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                a.foiPago
+                                    ? Icons.check_circle
+                                    : Icons.hourglass_empty,
+                                size: 16,
                                 color: a.foiPago
-                                    ? AppTheme.successColor.withAlpha(25)
-                                    : AppTheme.warningColor.withAlpha(25),
-                                borderRadius: BorderRadius.circular(8),
+                                    ? AppTheme.successColor
+                                    : AppTheme.warningColor,
                               ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    a.foiPago
-                                        ? Icons.check_circle
-                                        : Icons.hourglass_empty,
-                                    size: 16,
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  a.foiPago
+                                      ? 'PAGO${a.dataPagamento != null ? ' em ${_formatDate(a.dataPagamento!)}' : ''}'
+                                      : 'AGUARDANDO PAGAMENTO',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
                                     color: a.foiPago
                                         ? AppTheme.successColor
                                         : AppTheme.warningColor,
                                   ),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    a.foiPago
-                                        ? 'PAGO${a.dataPagamento != null ? ' em ${_formatDate(a.dataPagamento!)}' : ''}'
-                                        : 'AGUARDANDO PAGAMENTO',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w600,
-                                      color: a.foiPago
-                                          ? AppTheme.successColor
-                                          : AppTheme.warningColor,
-                                    ),
-                                  ),
-                                ],
+                                ),
                               ),
+                            ],
+                          ),
+                        );
+
+                        final toggleRecebidoButton = OutlinedButton.icon(
+                          onPressed: () async {
+                            if (a.foiPago) {
+                              ctrl.desmarcarAdiantamentoPago(i);
+                            } else {
+                              await _dialogMarcarPagamentoAdiantamento(
+                                i,
+                                valorReceberCps,
+                              );
+                            }
+                          },
+                          icon: Icon(
+                            a.foiPago ? Icons.undo : Icons.paid,
+                            size: 16,
+                            color: a.foiPago
+                                ? AppTheme.errorColor
+                                : AppTheme.successColor,
+                          ),
+                          label: Text(
+                            a.foiPago ? 'Desmarcar recebido' : 'Marcar recebido',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: a.foiPago
+                                  ? AppTheme.errorColor
+                                  : AppTheme.successColor,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        IconButton(
-                          icon: const Icon(Icons.delete_outline,
-                              color: AppTheme.errorColor, size: 20),
+                        );
+
+                        final deleteButton = IconButton(
+                          icon: const Icon(
+                            Icons.delete_outline,
+                            color: AppTheme.errorColor,
+                            size: 20,
+                          ),
                           onPressed: () {
                             showDialog(
                               context: context,
                               builder: (ctx) => AlertDialog(
                                 title: const Text('Remover Adiantamento?'),
                                 content: Text(
-                                    'Deseja remover o adiantamento de ${_formatCurrency(a.valor)}?'),
+                                  'Deseja remover o adiantamento de ${_formatCurrency(a.valor)}?',
+                                ),
                                 actions: [
                                   TextButton(
                                     onPressed: () => Navigator.pop(ctx),
@@ -1314,8 +1419,35 @@ class _AdiantamentosScreenState extends State<AdiantamentosScreen> {
                               ),
                             );
                           },
-                        ),
-                      ],
+                        );
+
+                        if (compact) {
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              statusWidget,
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  Expanded(child: toggleRecebidoButton),
+                                  const SizedBox(width: 8),
+                                  deleteButton,
+                                ],
+                              ),
+                            ],
+                          );
+                        }
+
+                        return Row(
+                          children: [
+                            Expanded(child: statusWidget),
+                            const SizedBox(width: 8),
+                            toggleRecebidoButton,
+                            const SizedBox(width: 8),
+                            deleteButton,
+                          ],
+                        );
+                      },
                     ),
                     if (a.observacao.isNotEmpty)
                       Padding(
@@ -1350,6 +1482,15 @@ class _AdiantamentosScreenState extends State<AdiantamentosScreen> {
 
   Widget _buildResumoFinanceiroLancamentos() {
     final e = emp!;
+    final totalAdiantamentosLancados = e.totalAdiantamentos;
+    final valorPrevistoSites = e.estimativaTotal;
+    final totalDescontaveisGeral =
+        e.totalLancamentosDescontaveis + e.totalLancamentosPrevistosDescontaveis;
+    final totalNaoDescontaveisGeral =
+        e.totalLancamentosNaoDescontaveis + e.totalLancamentosPrevistosNaoDescontaveis;
+    final totalLancamentosGeral =
+      totalAdiantamentosLancados + valorPrevistoSites + totalDescontaveisGeral + totalNaoDescontaveisGeral;
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -1366,26 +1507,38 @@ class _AdiantamentosScreenState extends State<AdiantamentosScreen> {
             ),
             const SizedBox(height: 10),
             _buildItemResumo(
-              'Lançamentos descontáveis',
-              _formatCurrency(e.totalLancamentosDescontaveis),
+              'Total de adiantamentos lançados',
+              _formatCurrency(totalAdiantamentosLancados),
               Icons.remove_circle_outline,
               AppTheme.errorColor,
             ),
             _buildItemResumo(
-              'Lançamentos não descontáveis',
-              _formatCurrency(e.totalLancamentosNaoDescontaveis),
+              'Lançamentos não descontáveis (total)',
+              _formatCurrency(totalNaoDescontaveisGeral),
               Icons.add_circle_outline,
               AppTheme.successColor,
             ),
+            if (totalNaoDescontaveisGeral == 0)
+              Padding(
+                padding: const EdgeInsets.only(left: 30, top: 2, bottom: 4),
+                child: Text(
+                  'Sem lançamentos não descontáveis registrados nesta empresa.',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.grey[600],
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
             _buildItemResumo(
-              'Lançamentos previstos',
-              _formatCurrency(e.totalLancamentosPrevistos),
+              'Valor previsto (total de todos os sites)',
+              _formatCurrency(valorPrevistoSites),
               Icons.schedule,
               AppTheme.warningColor,
             ),
             _buildItemResumo(
-              'Total de lançamentos',
-              _formatCurrency(e.totalLancamentosFinanceiros),
+              'Total de lançamentos (geral)',
+              _formatCurrency(totalLancamentosGeral),
               Icons.receipt_long,
               AppTheme.primaryColor,
             ),
@@ -1787,24 +1940,7 @@ class _AdiantamentosScreenState extends State<AdiantamentosScreen> {
     lancamentosFiltrados.sort(_compararLancamentos);
 
     if (e.lancamentosFinanceiros.isEmpty) {
-      return Card(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Center(
-            child: Column(
-              children: [
-                Icon(Icons.receipt_long_outlined,
-                    size: 44, color: Colors.grey[350]),
-                const SizedBox(height: 10),
-                Text(
-                  'Nenhum lançamento financeiro registrado',
-                  style: TextStyle(color: Colors.grey[600]),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
+      return const SizedBox.shrink();
     }
 
     return Card(
@@ -2658,7 +2794,7 @@ class _AdiantamentosScreenState extends State<AdiantamentosScreen> {
   }
 
   String _formatCurrency(double value) {
-    return 'R\$ ${value.toStringAsFixed(2).replaceAll('.', ',')}';
+    return CurrencyUtils.formatBRL(value);
   }
 
   String _formatDate(DateTime date) {
@@ -2789,52 +2925,74 @@ class _AdiantamentosScreenState extends State<AdiantamentosScreen> {
     );
   }
 
-  Future<void> _dialogMarcarPagamentoAdiantamento(
+  Future<void> _dialogReabrirAdiantamento(
     int index,
-    double valorReceberCps,
+    dynamic adiantamento,
   ) async {
-    DateTime dataPagamento = DateTime.now();
+    var manterDataAtual = true;
+    DateTime novaData = adiantamento.data;
 
     await showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Marcar CPS como pago'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Valor a receber deste CPS: ${_formatCurrency(valorReceberCps)}',
-                style: const TextStyle(
-                  fontWeight: FontWeight.w700,
-                  color: AppTheme.primaryColor,
+          title: const Text('Reabrir CPS'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Ao reabrir, você pode manter a data atual do CPS ou escolher uma nova data.',
                 ),
-              ),
-              const SizedBox(height: 12),
-              InkWell(
-                onTap: () async {
-                  final picked = await showDatePicker(
-                    context: context,
-                    initialDate: dataPagamento,
-                    firstDate: DateTime(2020),
-                    lastDate: DateTime(2035),
-                  );
-                  if (picked != null) {
-                    setDialogState(() => dataPagamento = picked);
-                  }
-                },
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey),
-                    borderRadius: BorderRadius.circular(8),
+                const SizedBox(height: 12),
+                RadioListTile<bool>(
+                  contentPadding: EdgeInsets.zero,
+                  value: true,
+                  groupValue: manterDataAtual,
+                  onChanged: (value) {
+                    if (value == null) return;
+                    setDialogState(() => manterDataAtual = value);
+                  },
+                  title: Text(
+                    'Manter data atual (${_formatDate(adiantamento.data)})',
                   ),
-                  child: Text('Data do pagamento: ${_formatDate(dataPagamento)}'),
                 ),
-              ),
-            ],
+                RadioListTile<bool>(
+                  contentPadding: EdgeInsets.zero,
+                  value: false,
+                  groupValue: manterDataAtual,
+                  onChanged: (value) {
+                    if (value == null) return;
+                    setDialogState(() => manterDataAtual = value);
+                  },
+                  title: const Text('Alterar data do CPS'),
+                ),
+                if (!manterDataAtual)
+                  InkWell(
+                    onTap: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: novaData,
+                        firstDate: DateTime(2020),
+                        lastDate: DateTime(2035),
+                      );
+                      if (picked != null) {
+                        setDialogState(() => novaData = picked);
+                      }
+                    },
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text('Nova data: ${_formatDate(novaData)}'),
+                    ),
+                  ),
+              ],
+            ),
           ),
           actions: [
             TextButton(
@@ -2843,10 +3001,136 @@ class _AdiantamentosScreenState extends State<AdiantamentosScreen> {
             ),
             ElevatedButton(
               onPressed: () {
+                ctrl.reabrirAdiantamento(
+                  index,
+                  manterDataAtual: manterDataAtual,
+                  novaDataCps: manterDataAtual ? null : novaData,
+                );
+                Navigator.pop(ctx);
+              },
+              child: const Text('Confirmar reabertura'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _dialogMarcarPagamentoAdiantamento(
+    int index,
+    double valorReceberCps,
+  ) async {
+    final adiantamento = emp!.adiantamentos[index];
+    final dataAnterior = adiantamento.dataPagamento;
+    bool usarDataAnterior = dataAnterior != null;
+    DateTime dataPagamento =
+        usarDataAnterior ? dataAnterior! : DateTime.now();
+    final valorInicial = adiantamento.valorPago > 0
+        ? adiantamento.valorPago
+        : valorReceberCps;
+    final valorController = TextEditingController(
+      text: valorInicial.toStringAsFixed(2).replaceAll('.', ','),
+    );
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Marcar CPS como pago'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Valor a receber deste CPS: ${_formatCurrency(valorReceberCps)}',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.primaryColor,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: valorController,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: const InputDecoration(
+                    labelText: 'Valor pago neste recebimento',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                if (dataAnterior != null)
+                  SwitchListTile.adaptive(
+                    contentPadding: EdgeInsets.zero,
+                    value: usarDataAnterior,
+                    onChanged: (value) {
+                      setDialogState(() {
+                        usarDataAnterior = value;
+                        if (usarDataAnterior) {
+                          dataPagamento = dataAnterior;
+                        }
+                      });
+                    },
+                    title: Text(
+                      'Usar data anterior (${_formatDate(dataAnterior)})',
+                    ),
+                    subtitle: const Text(
+                      'Desative para escolher uma nova data.',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                  ),
+                if (!usarDataAnterior || dataAnterior == null)
+                  InkWell(
+                    onTap: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: dataPagamento,
+                        firstDate: DateTime(2020),
+                        lastDate: DateTime(2035),
+                      );
+                      if (picked != null) {
+                        setDialogState(() => dataPagamento = picked);
+                      }
+                    },
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text('Data do pagamento: ${_formatDate(dataPagamento)}'),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final valorTexto = valorController.text.trim()
+                    .replaceAll('.', '')
+                    .replaceAll(',', '.');
+                final valorPago = double.tryParse(valorTexto);
+                if (valorPago == null || valorPago < 0) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Informe um valor válido para o pagamento.'),
+                      backgroundColor: AppTheme.errorColor,
+                    ),
+                  );
+                  return;
+                }
                 ctrl.marcarAdiantamentoPago(
                   index,
-                  dataPagamento: dataPagamento,
-                  valorPago: valorReceberCps,
+                  dataPagamento: usarDataAnterior && dataAnterior != null
+                      ? dataAnterior
+                      : dataPagamento,
+                  valorPago: valorPago,
                 );
                 Navigator.pop(ctx);
               },
@@ -2856,6 +3140,8 @@ class _AdiantamentosScreenState extends State<AdiantamentosScreen> {
         ),
       ),
     );
+
+    valorController.dispose();
   }
 
   Future<void> _dialogMarcarTodosPendentesComoPago() async {

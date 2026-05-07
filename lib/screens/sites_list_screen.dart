@@ -3,6 +3,7 @@ import '../controllers/demanda_controller.dart';
 import '../models/site_model.dart';
 import '../models/empresa_model.dart';
 import '../theme/app_theme.dart';
+import '../utils/currency_utils.dart';
 
 class SitesListScreen extends StatefulWidget {
   final DemandaController controller;
@@ -202,7 +203,10 @@ class _SitesListScreenState extends State<SitesListScreen> {
             ),
           ),
           Text(
-            'R\$ ${(sitesFiltrados.where((e) => e.value.isConcluido).length * emp!.valorPorSite).toStringAsFixed(2).replaceAll('.', ',')}',
+            CurrencyUtils.formatBRL(
+              sitesFiltrados.where((e) => e.value.isConcluido).length *
+                  emp!.valorPorSite,
+            ),
             style: const TextStyle(
               fontSize: 13,
               color: AppTheme.successColor,
@@ -452,7 +456,7 @@ class _SitesListScreenState extends State<SitesListScreen> {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
-                        'R\$ ${emp!.valorPorSite.toStringAsFixed(2).replaceAll('.', ',')}',
+                        CurrencyUtils.formatBRL(emp!.valorPorSite),
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 15,

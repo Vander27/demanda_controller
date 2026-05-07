@@ -1,6 +1,8 @@
 import 'dart:io';
+import 'dart:async';
 import 'package:flutter/material.dart' hide Border, BorderStyle;
 import 'package:flutter/services.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
@@ -12,10 +14,12 @@ import '../controllers/demanda_controller.dart';
 import '../services/cloud_backup_service.dart';
 import '../services/auth_service.dart';
 import '../services/drive_backup_service.dart';
+import '../services/login_preferences_service.dart';
 import '../models/empresa_model.dart';
 import '../models/site_model.dart';
 import '../models/relatorio_model.dart';
 import '../theme/app_theme.dart';
+import '../utils/currency_utils.dart';
 import 'login_screen.dart';
 
 class ExportarScreen extends StatelessWidget {
@@ -1265,7 +1269,7 @@ class ExportarScreen extends StatelessWidget {
       row++;
 
       sheet.merge(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: row), CellIndex.indexByColumnRow(columnIndex: 6, rowIndex: row),
-          customValue: TextCellValue('R\$ ${emp.valorPorSite.toStringAsFixed(2).replaceAll('.', ',')}/site  |  ${emp.tipoAdiantamentoDescricao}  |  ${emp.foiPago ? "PAGO" : "AGUARDANDO PAGAMENTO"}'));
+          customValue: TextCellValue('${_formatCurrency(emp.valorPorSite)}/site  |  ${emp.tipoAdiantamentoDescricao}  |  ${emp.foiPago ? "PAGO" : "AGUARDANDO PAGAMENTO"}'));
       sheet.setRowHeight(row, 22);
       _xlsApplyRowStyle(sheet, row, 7, _xlsSubtitleStyle());
       row++;
@@ -2097,6 +2101,7 @@ class ExportarScreen extends StatelessWidget {
   Future<void> _excluirContaEDados(BuildContext context) async {
     final authService = AuthService();
     final cloudBackupService = CloudBackupService();
+    final loginPreferencesService = LoginPreferencesService();
     final user = authService.usuarioAtual;
 
     if (user == null || user.email == null) {
@@ -2114,6 +2119,7 @@ class ExportarScreen extends StatelessWidget {
     final senhaController = TextEditingController();
     final confirmaController = TextEditingController();
     bool confirmacaoAtiva = false;
+    bool senhaInformada = false;
 
     final confirmar = await showDialog<bool>(
       context: context,
@@ -2143,6 +2149,11 @@ class ExportarScreen extends StatelessWidget {
                     labelText: 'Senha atual',
                     border: OutlineInputBorder(),
                   ),
+                  onChanged: (v) {
+                    setDialogState(() {
+                      senhaInformada = v.trim().isNotEmpty;
+                    });
+                  },
                 ),
                 const SizedBox(height: 10),
                 TextField(
@@ -2166,7 +2177,9 @@ class ExportarScreen extends StatelessWidget {
               child: const Text('Cancelar'),
             ),
             ElevatedButton(
-              onPressed: confirmacaoAtiva ? () => Navigator.pop(ctx, true) : null,
+              onPressed: confirmacaoAtiva && senhaInformada
+                  ? () => Navigator.pop(ctx, true)
+                  : null,
               style: ElevatedButton.styleFrom(backgroundColor: AppTheme.errorColor),
               child: const Text('Excluir definitivamente'),
             ),
@@ -2195,27 +2208,95 @@ class ExportarScreen extends StatelessWidget {
       return;
     }
 
-    try {
-      await authService.reautenticarComSenhaAtual(senhaController.text.trim());
-      await cloudBackupService.excluirDadosNuvemDoUsuarioAtual();
-      await authService.excluirContaAtual();
-      await controller.limparDadosLocaisCompletos();
+    bool loadingAberto = false;
 
+    void fecharLoadingSeAberto() {
+      if (!loadingAberto || !context.mounted) return;
+      Navigator.of(context, rootNavigator: true).maybePop();
+      loadingAberto = false;
+    }
+
+    try {
+      if (!context.mounted) return;
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (loadingCtx) => const AlertDialog(
+          content: Row(
+            children: [
+              SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+              SizedBox(width: 12),
+              Expanded(
+                child: Text('Excluindo conta e dados...'),
+              ),
+            ],
+          ),
+        ),
+      );
+      loadingAberto = true;
+
+      await authService
+          .reautenticarComSenhaAtual(senhaController.text.trim())
+          .timeout(const Duration(seconds: 8));
+
+      // Limpeza local e da nuvem rodam em paralelo para reduzir tempo total.
+      final limparNuvemFuture = cloudBackupService
+          .excluirDadosNuvemDoUsuarioAtual()
+          .timeout(const Duration(seconds: 6))
+          .catchError((_) {
+        // Não bloqueia a exclusão de conta se a nuvem demorar/falhar.
+      });
+
+      final limparLocalFuture = Future.wait([
+        controller.limparDadosLocaisCompletos().timeout(const Duration(seconds: 8)),
+        loginPreferencesService
+            .limparDadosSalvosLogin(desativarAutofillNativo: true)
+            .timeout(const Duration(seconds: 6)),
+      ]);
+
+      await Future.wait([
+        limparNuvemFuture,
+        limparLocalFuture,
+      ]);
+
+      await authService.excluirContaAtual().timeout(const Duration(seconds: 8));
+      TextInput.finishAutofillContext(shouldSave: false);
+
+      fecharLoadingSeAberto();
       if (!context.mounted) return;
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (_) => LoginScreen(controller: controller)),
         (route) => false,
       );
+    } on FirebaseAuthException catch (e) {
+      fecharLoadingSeAberto();
+      if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Conta e dados excluídos com sucesso.'),
-          backgroundColor: AppTheme.successColor,
+          content: Text(_traduzirErroExclusaoConta(e.code)),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      );
+    } on TimeoutException {
+      fecharLoadingSeAberto();
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Tempo esgotado ao excluir conta. Tente novamente.'),
+          backgroundColor: Colors.red,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
       );
     } catch (e) {
+      fecharLoadingSeAberto();
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -2226,8 +2307,25 @@ class ExportarScreen extends StatelessWidget {
         ),
       );
     } finally {
+      fecharLoadingSeAberto();
       senhaController.dispose();
       confirmaController.dispose();
+    }
+  }
+
+  String _traduzirErroExclusaoConta(String code) {
+    switch (code) {
+      case 'wrong-password':
+      case 'invalid-credential':
+        return 'Senha incorreta. Confira e tente novamente.';
+      case 'too-many-requests':
+        return 'Muitas tentativas. Aguarde e tente novamente.';
+      case 'network-request-failed':
+        return 'Sem internet. Verifique sua conexão.';
+      case 'requires-recent-login':
+        return 'Sessão expirada. Faça login novamente e tente excluir a conta.';
+      default:
+        return 'Falha ao excluir conta ($code).';
     }
   }
 
@@ -2363,7 +2461,7 @@ class ExportarScreen extends StatelessWidget {
   }
 
   String _formatCurrency(double value) {
-    return 'R\$ ${value.toStringAsFixed(2).replaceAll('.', ',')}';
+    return CurrencyUtils.formatBRL(value);
   }
 
   String _formatDate(DateTime date) {

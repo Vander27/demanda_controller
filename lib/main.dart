@@ -6,6 +6,7 @@ import 'theme/app_theme.dart';
 import 'controllers/demanda_controller.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/login_screen.dart';
+import 'services/login_preferences_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -50,6 +51,7 @@ class _SplashScreenState extends State<SplashScreen>
   late Animation<double> _fadeAnim;
   late Animation<double> _scaleAnim;
   final DemandaController _controller = DemandaController();
+  final LoginPreferencesService _loginPrefsService = LoginPreferencesService();
 
   @override
   void initState() {
@@ -70,16 +72,22 @@ class _SplashScreenState extends State<SplashScreen>
 
   Future<void> _carregarDados() async {
     await _controller.init();
+    final loginPrefs = await _loginPrefsService.carregar();
+    final usuarioAtual = FirebaseAuth.instance.currentUser;
+    final bool podeEntrarAutomatico =
+        !loginPrefs.exigirLoginAoAbrir && usuarioAtual != null;
+
     await Future.delayed(const Duration(seconds: 2));
     if (mounted) {
-      final usuario = FirebaseAuth.instance.currentUser;
       Navigator.pushReplacement(
         context,
         PageRouteBuilder(
-          pageBuilder: (context, animation, secondaryAnimation) =>
-              usuario == null
-                  ? LoginScreen(controller: _controller)
-                  : DashboardScreen(controller: _controller),
+          pageBuilder: (context, animation, secondaryAnimation) {
+            if (podeEntrarAutomatico) {
+              return DashboardScreen(controller: _controller);
+            }
+            return LoginScreen(controller: _controller);
+          },
           transitionsBuilder: (context, anim, secondaryAnimation, child) =>
               FadeTransition(opacity: anim, child: child),
           transitionDuration: const Duration(milliseconds: 500),

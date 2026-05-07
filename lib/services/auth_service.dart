@@ -25,7 +25,8 @@ class AuthService {
     );
   }
 
-  Future<void> enviarRecuperacaoSenha(String email) {
+  Future<void> enviarRecuperacaoSenha(String email) async {
+    await _auth.setLanguageCode('pt');
     return _auth.sendPasswordResetEmail(email: email.trim());
   }
 
