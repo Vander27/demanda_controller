@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Demanda Controller - Publicacao no GitHub Pages</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f3faff;
+      --surface: #ffffff;
+      --ink: #10273d;
+      --muted: #4b657f;
+      --line: #cfe3f3;
+      --brand: #0e4a78;
+      --brand-2: #1687a3;
+      --accent: #0ab7a0;
+      --warn: #f5a438;
+      --ok: #17866f;
+      --shadow: rgba(15, 76, 118, 0.14);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      font-family: "Space Grotesk", "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at 12% 8%, rgba(10, 183, 160, 0.2), transparent 35%),
+        radial-gradient(circle at 86% 14%, rgba(22, 135, 163, 0.22), transparent 36%),
+        linear-gradient(180deg, #f8fdff 0%, var(--bg) 100%);
+      overflow-x: hidden;
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(16, 39, 61, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(16, 39, 61, 0.03) 1px, transparent 1px);
+      background-size: 32px 32px;
+      opacity: 0.8;
+    }
+    .wrap {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 26px 16px 40px;
+      position: relative;
+      z-index: 1;
+    }
+    .hero {
+      position: relative;
+      border-radius: 24px;
+      padding: 26px;
+      color: #e8f7ff;
+      background: linear-gradient(130deg, #103754 0%, #155f86 48%, #18a39f 100%);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      box-shadow: 0 18px 34px rgba(16, 92, 136, 0.24);
+      animation: riseIn 600ms ease-out both;
+    }
+    .hero::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: 24px;
+      background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.12) 48%, transparent 100%);
+      transform: translateX(-120%);
+      animation: stream 6s ease-in-out infinite;
+      pointer-events: none;
+    }
+    .hero small {
+      display: inline-block;
+      font-size: 11px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: #b8e8f8;
+      margin-bottom: 10px;
+    }
+    h1 {
+      margin: 0;
+      font-family: "Orbitron", "Space Grotesk", sans-serif;
+      font-size: clamp(1.45rem, 3.3vw, 2.15rem);
+      letter-spacing: 0.03em;
+      line-height: 1.24;
+      color: #fff;
+    }
+    .hero p {
+      margin: 10px 0 0;
+      max-width: 760px;
+      line-height: 1.55;
+      color: #d7efff;
+      font-size: 0.95rem;
+    }
+    .hero-actions {
+      margin-top: 14px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      text-decoration: none;
+      border-radius: 999px;
+      border: 1px solid transparent;
+      padding: 8px 13px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      transition: transform 180ms ease, box-shadow 180ms ease;
+    }
+    .btn.primary {
+      background: #fff;
+      color: #0e4b79;
+      box-shadow: 0 8px 18px rgba(255, 255, 255, 0.28);
+    }
+    .btn.alt {
+      color: #dff7ff;
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.32);
+    }
+    .btn:hover { transform: translateY(-2px); }
+
+    .section {
+      margin-top: 14px;
+      background: linear-gradient(180deg, #fff 0%, #f8fdff 100%);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 7px 18px var(--shadow);
+      animation: riseIn 620ms ease-out both;
+    }
+    .section h2 {
+      margin: 0;
+      font-family: "Orbitron", "Space Grotesk", sans-serif;
+      font-size: 1rem;
+      letter-spacing: 0.02em;
+      color: var(--brand);
+      line-height: 1.35;
+    }
+    .steps {
+      margin: 10px 0 0;
+      padding-left: 20px;
+      color: #1f3d57;
+      line-height: 1.5;
+    }
+    .steps li { margin: 8px 0; }
+
+    .kpis {
+      margin-top: 12px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 10px;
+    }
+    .kpi {
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      background: #fbfeff;
+      padding: 12px;
+      box-shadow: 0 4px 12px rgba(16, 75, 120, 0.08);
+    }
+    .kpi h3 {
+      margin: 0;
+      color: #145173;
+      font-size: 0.95rem;
+      font-family: "Orbitron", "Space Grotesk", sans-serif;
+      letter-spacing: 0.02em;
+    }
+    .kpi p {
+      margin: 7px 0 0;
+      color: var(--muted);
+      line-height: 1.42;
+      font-size: 0.88rem;
+    }
+
+    .callout {
+      margin-top: 12px;
+      border-radius: 12px;
+      padding: 12px;
+      border: 1px solid #bde9e2;
+      background: #ebfaf7;
+      color: #0f6e62;
+      font-size: 0.9rem;
+      line-height: 1.45;
+    }
+    .callout.warn {
+      border-color: #f2d5ad;
+      background: #fff6ea;
+      color: #9a651a;
+    }
+
+    .url-box {
+      margin-top: 10px;
+      border: 1px dashed #a8cfe6;
+      border-radius: 10px;
+      padding: 10px;
+      background: #f6fbff;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 0.82rem;
+      color: #155377;
+      word-break: break-all;
+    }
+
+    .checklist {
+      margin-top: 10px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 10px;
+    }
+    .check {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px;
+      background: #fbfeff;
+    }
+    .check h3 {
+      margin: 0;
+      color: #11567e;
+      font-size: 0.92rem;
+      font-family: "Orbitron", "Space Grotesk", sans-serif;
+      letter-spacing: 0.02em;
+    }
+    .check ul {
+      margin: 8px 0 0;
+      padding-left: 18px;
+      color: #294760;
+      line-height: 1.45;
+      font-size: 0.88rem;
+    }
+
+    .footer {
+      margin-top: 18px;
+      text-align: center;
+      color: #4c647c;
+      font-size: 0.8rem;
+    }
+
+    @keyframes riseIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes stream {
+      0% { transform: translateX(-120%); opacity: 0; }
+      35% { opacity: 0.9; }
+      50% { transform: translateX(28%); opacity: 0.58; }
+      100% { transform: translateX(120%); opacity: 0; }
+    }
+    @media (max-width: 640px) {
+      .wrap { padding: 20px 14px 34px; }
+      .hero { padding: 22px 16px; border-radius: 18px; }
+      .section { padding: 14px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <section class="hero">
+      <small>Guia operacional para deploy no GitHub Pages</small>
+      <h1>Publicacao da Politica no GitHub Pages</h1>
+      <p>Passo a passo visual para publicar os documentos legais e o guia do app com URL publica valida para o Play Console.</p>
+      <div class="hero-actions">
+        <a class="btn primary" href="index.html">Voltar ao portal</a>
+        <a class="btn alt" href="privacy-policy.html">Ver politica de privacidade</a>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Objetivo</h2>
+      <ol class="steps">
+        <li>Publicar a pasta docs no GitHub Pages.</li>
+        <li>Obter URL publica para preencher no Play Console.</li>
+        <li>Garantir que politica e termos estejam acessiveis por navegador.</li>
+      </ol>
+      <div class="callout">Resultado esperado: pagina inicial do portal funcionando e links legais abrindo sem erro.</div>
+    </section>
+
+    <section class="section">
+      <h2>Arquivos que devem estar publicados</h2>
+      <div class="kpis">
+        <article class="kpi">
+          <h3>Portal principal</h3>
+          <p>docs/index.html</p>
+        </article>
+        <article class="kpi">
+          <h3>Politica de privacidade</h3>
+          <p>docs/privacy-policy.html</p>
+        </article>
+        <article class="kpi">
+          <h3>Termos e licenca</h3>
+          <p>docs/terms-license.html</p>
+        </article>
+        <article class="kpi">
+          <h3>Guia de uso do app</h3>
+          <p>docs/guia-usuario-completo.html</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Passo a passo no GitHub</h2>
+      <ol class="steps">
+        <li>Abra o repositorio no GitHub.</li>
+        <li>Entre em Settings > Pages.</li>
+        <li>Em Build and deployment, selecione Source: Deploy from a branch.</li>
+        <li>Escolha Branch: main e Folder: /docs.</li>
+        <li>Clique em Save e aguarde o deploy.</li>
+        <li>Atualize a pagina apos 1 a 3 minutos para validar.</li>
+      </ol>
+      <div class="callout warn">Se o site abrir antigo, force refresh no navegador (Ctrl + F5) para limpar cache.</div>
+    </section>
+
+    <section class="section">
+      <h2>URLs esperadas</h2>
+      <p style="margin-top:10px;color:#2b4b66;font-size:0.92rem;">Troque SEU_USUARIO pelo seu usuario real do GitHub.</p>
+      <div class="url-box">https://SEU_USUARIO.github.io/demanda_controller/</div>
+      <div class="url-box">https://SEU_USUARIO.github.io/demanda_controller/privacy-policy.html</div>
+      <div class="url-box">https://SEU_USUARIO.github.io/demanda_controller/terms-license.html</div>
+      <div class="url-box">https://SEU_USUARIO.github.io/demanda_controller/guia-usuario-completo.html</div>
+    </section>
+
+    <section class="section">
+      <h2>Checklist de conformidade Play Store</h2>
+      <div class="checklist">
+        <article class="check">
+          <h3>Politica de privacidade</h3>
+          <ul>
+            <li>Nome do aplicativo</li>
+            <li>Data da ultima atualizacao</li>
+            <li>Responsavel e contato oficial</li>
+            <li>Coleta, uso e compartilhamento de dados</li>
+            <li>Armazenamento e seguranca</li>
+            <li>Como excluir conta e dados</li>
+            <li>Nao destinado a criancas</li>
+          </ul>
+        </article>
+        <article class="check">
+          <h3>Termos e licenca</h3>
+          <ul>
+            <li>Aceitacao dos termos</li>
+            <li>Licenca e restricoes de uso</li>
+            <li>Responsabilidades da conta</li>
+            <li>Limite de responsabilidade</li>
+            <li>Propriedade intelectual</li>
+            <li>Suspensao/encerramento</li>
+            <li>Contato oficial</li>
+          </ul>
+        </article>
+      </div>
+      <div class="callout">No Play Console, a URL principal obrigatoria geralmente e a da politica de privacidade.</div>
+    </section>
+
+    <p class="footer">Demanda Controller · Guia de Publicacao GitHub Pages · Atualizado em 08/05/2026</p>
+  </main>
+</body>
+</html>
