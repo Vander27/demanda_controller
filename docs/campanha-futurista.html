@@ -132,94 +132,145 @@
       flex-wrap: wrap;
     }
 
-    .sound-toggle {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      border-radius: 999px;
-      border: 1px solid rgba(149, 224, 255, 0.4);
-      background: rgba(8, 30, 62, 0.72);
-      color: #d9f2ff;
-      padding: 10px 14px;
-      font-size: 0.8rem;
-      font-weight: 800;
-      letter-spacing: 0.03em;
-      cursor: pointer;
-      transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease;
-    }
-
-    .sound-toggle:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 10px 20px rgba(15, 75, 130, 0.34);
-    }
-
-    .sound-toggle.is-on {
-      background: linear-gradient(120deg, rgba(47, 213, 255, 0.22) 0%, rgba(103, 255, 213, 0.22) 100%);
-      border-color: rgba(103, 255, 213, 0.46);
-      color: #ecffff;
-    }
-
-    .playlist {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      border-radius: 999px;
-      border: 1px solid rgba(149, 224, 255, 0.35);
-      background: rgba(8, 30, 62, 0.64);
-      padding: 6px 8px 6px 10px;
-    }
-
-    .playlist span {
-      font-size: 0.74rem;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      color: #9ad8fb;
-      font-weight: 800;
-      white-space: nowrap;
-    }
-
-    .playlist select {
-      border-radius: 999px;
-      border: 1px solid rgba(145, 220, 255, 0.34);
-      background: rgba(4, 19, 41, 0.82);
-      color: #dcf3ff;
-      padding: 6px 10px;
-      font-size: 0.78rem;
-      font-weight: 700;
-      outline: none;
-      min-width: 150px;
-    }
-
-    .playlist button {
-      border-radius: 999px;
-      border: 1px solid rgba(145, 220, 255, 0.34);
-      background: rgba(9, 39, 73, 0.78);
-      color: #d7f1ff;
-      padding: 6px 10px;
-      font-size: 0.76rem;
-      font-weight: 800;
-      cursor: pointer;
-      transition: transform 180ms ease, background 180ms ease;
-    }
-
-    .playlist button:hover {
-      transform: translateY(-1px);
-      background: rgba(16, 61, 112, 0.84);
-    }
-
-    .playlist button.is-active {
-      background: linear-gradient(120deg, rgba(47, 213, 255, 0.3) 0%, rgba(103, 255, 213, 0.24) 100%);
-      border-color: rgba(103, 255, 213, 0.5);
-      color: #f1ffff;
-    }
-
-    .playlist-time {
+    .music-player {
+      margin-top: 20px;
       width: 100%;
-      margin-top: 6px;
-      font-size: 0.74rem;
-      color: #9ad2f0;
-      letter-spacing: 0.02em;
-      text-align: right;
+      max-width: 520px;
+      border-radius: 18px;
+      background: linear-gradient(145deg, rgba(5, 18, 44, 0.95), rgba(3, 11, 28, 0.98));
+      border: 1px solid rgba(47, 213, 255, 0.2);
+      box-shadow: 0 0 40px rgba(47, 213, 255, 0.07), inset 0 1px 0 rgba(255,255,255,0.05);
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      backdrop-filter: blur(14px);
+    }
+
+    .mp-art {
+      flex-shrink: 0;
+      width: 54px;
+      height: 54px;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid rgba(47, 213, 255, 0.35);
+      box-shadow: 0 0 14px rgba(47, 213, 255, 0.25);
+    }
+
+    .mp-art-inner {
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, #071d4a, #0d5475, #0e8a6a);
+      animation: mpArtPulse 4s ease-in-out infinite alternate;
+    }
+
+    @keyframes mpArtPulse {
+      0%   { background: linear-gradient(135deg, #071d4a, #0d5475, #0e8a6a); }
+      50%  { background: linear-gradient(135deg, #0b2a66, #1168a0, #0fa074); }
+      100% { background: linear-gradient(135deg, #071d4a, #0e6280, #09756a); }
+    }
+
+    .mp-main {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+
+    .mp-meta { display: flex; flex-direction: column; gap: 1px; }
+
+    .mp-track-name {
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: #e8f8ff;
+      font-family: "Orbitron", sans-serif;
+      letter-spacing: 0.03em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .mp-artist {
+      font-size: 0.68rem;
+      color: #5da8c8;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .mp-controls {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .mp-btn {
+      background: none;
+      border: none;
+      color: #7ac4de;
+      font-size: 1rem;
+      cursor: pointer;
+      padding: 5px 7px;
+      border-radius: 8px;
+      transition: color 180ms, background 180ms, transform 140ms;
+      line-height: 1;
+    }
+
+    .mp-btn:hover {
+      color: #2fd5ff;
+      background: rgba(47, 213, 255, 0.1);
+      transform: scale(1.18);
+    }
+
+    .mp-btn.mp-play {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #2fd5ff, #67ffd5);
+      color: #021020;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 14px rgba(47, 213, 255, 0.5);
+      padding: 0;
+      transition: box-shadow 200ms, transform 140ms, background 200ms;
+    }
+
+    .mp-btn.mp-play:hover {
+      box-shadow: 0 0 24px rgba(47, 213, 255, 0.8);
+      transform: scale(1.1);
+    }
+
+    .mp-btn.is-active { color: #2fd5ff; }
+
+    .mp-progress-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .mp-time {
+      font-size: 0.68rem;
+      color: #6aadcc;
+      letter-spacing: 0.04em;
+      white-space: nowrap;
+      min-width: 28px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .mp-time:last-child { text-align: right; }
+
+    .mp-select {
+      border-radius: 8px;
+      border: 1px solid rgba(145, 220, 255, 0.22);
+      background: rgba(4, 14, 32, 0.7);
+      color: #aadaef;
+      padding: 5px 8px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      outline: none;
+      width: 100%;
     }
 
     .playlist-progress {
@@ -510,13 +561,67 @@
       z-index: 1;
     }
 
-    .reel .path {
-      margin-top: 9px;
-      display: block;
+    .reel-placeholder {
+      width: 100%;
+      aspect-ratio: 9 / 16;
+      border-radius: 12px;
+      border: 1px solid rgba(47, 213, 255, 0.28);
+      background: linear-gradient(170deg, #020c1e 0%, #041828 60%, #020c1e 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .reel-placeholder::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(47, 213, 255, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(47, 213, 255, 0.04) 1px, transparent 1px);
+      background-size: 24px 24px;
+      pointer-events: none;
+    }
+
+    .reel-scan {
+      position: absolute;
+      top: -20%;
+      left: 0;
+      right: 0;
+      height: 18%;
+      background: linear-gradient(180deg, transparent, rgba(47, 213, 255, 0.07), transparent);
+      animation: scanLine 3.2s linear infinite;
+      pointer-events: none;
+    }
+
+    @keyframes scanLine {
+      0%   { top: -20%; }
+      100% { top: 110%; }
+    }
+
+    .reel-badge {
+      font-family: "Orbitron", sans-serif;
       font-size: 0.75rem;
-      color: #91c8ea;
-      font-family: Consolas, "Courier New", monospace;
-      word-break: break-word;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      color: #2fd5ff;
+      text-transform: uppercase;
+      z-index: 1;
+    }
+
+    .reel-status {
+      font-size: 0.7rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: rgba(47, 213, 255, 0.45);
+      border: 1px solid rgba(47, 213, 255, 0.22);
+      border-radius: 999px;
+      padding: 4px 12px;
+      z-index: 1;
     }
 
     .shot {
@@ -808,24 +913,32 @@
     <h2 class="section-title">Reels Verticais</h2>
     <section class="reels">
       <article class="reel">
-        <h4>Reel 01 · Apresentacao curta</h4>
+        <h4>Reel 01 &middot; Apresentacao curta</h4>
         <p>Formato vertical 9:16 com autoplay silencioso para hero dinamico da pagina.</p>
         <div class="reel-frame">
-          <video controls muted loop playsinline preload="metadata">
-            <source src="assets/videos/reel-01.mp4#t=6,14" type="video/mp4">
+          <div class="reel-placeholder" id="reelPlaceholder1">
+            <div class="reel-scan"></div>
+            <span class="reel-badge">&#9654; REEL 01</span>
+            <span class="reel-status">Em Produ&ccedil;&atilde;o</span>
+          </div>
+          <video controls muted loop playsinline preload="metadata" style="display:none" id="reelVideo1">
+            <source src="assets/videos/reel-01.mp4" type="video/mp4">
           </video>
         </div>
-        <span class="path">assets/videos/reel-01.mp4</span>
       </article>
       <article class="reel">
-        <h4>Reel 02 · Operacao em campo</h4>
+        <h4>Reel 02 &middot; Operacao em campo</h4>
         <p>Segunda variacao para alternar narrativa entre missao e resultado.</p>
         <div class="reel-frame">
-          <video controls muted loop playsinline preload="metadata">
-            <source src="assets/videos/reel-02.mp4#t=6,14" type="video/mp4">
+          <div class="reel-placeholder" id="reelPlaceholder2">
+            <div class="reel-scan"></div>
+            <span class="reel-badge">&#9654; REEL 02</span>
+            <span class="reel-status">Em Produ&ccedil;&atilde;o</span>
+          </div>
+          <video controls muted loop playsinline preload="metadata" style="display:none" id="reelVideo2">
+            <source src="assets/videos/reel-02.mp4" type="video/mp4">
           </video>
         </div>
-        <span class="path">assets/videos/reel-02.mp4</span>
       </article>
     </section>
 
@@ -851,6 +964,20 @@
 
   <script>
     (function () {
+      // Mostrar vídeo e ocultar placeholder quando arquivo carrega
+      [['reelVideo1', 'reelPlaceholder1'], ['reelVideo2', 'reelPlaceholder2']].forEach(function (pair) {
+        var vid = document.getElementById(pair[0]);
+        var ph  = document.getElementById(pair[1]);
+        if (vid && ph) {
+          vid.addEventListener('canplay', function () {
+            ph.style.display = 'none';
+            vid.style.display = '';
+            vid.style.opacity = '0';
+            setTimeout(function () { vid.style.transition = 'opacity 800ms ease'; vid.style.opacity = '1'; }, 20);
+          }, { once: true });
+        }
+      });
+
       var velocidade = 0.75;
       var videos = document.querySelectorAll('.reel video');
       videos.forEach(function (video) {
@@ -910,14 +1037,17 @@
       var soundToggle = document.getElementById('soundToggle');
       var trackSelect = document.getElementById('trackSelect');
       var nextTrack = document.getElementById('nextTrack');
+      var prevTrack = document.getElementById('prevTrack');
       var shuffleMode = document.getElementById('shuffleMode');
       var repeatMode = document.getElementById('repeatMode');
-      var playlistTime = document.getElementById('playlistTime');
+      var mpTrackName = document.getElementById('mpTrackName');
+      var mpTimeCurrent = document.getElementById('mpTimeCurrent');
+      var mpTimeDuration = document.getElementById('mpTimeDuration');
       var playlistProgress = document.getElementById('playlistProgress');
       var playlistProgressFill = document.getElementById('playlistProgressFill');
       var playlistProgressThumb = document.getElementById('playlistProgressThumb');
 
-      if (bgMusic && soundToggle && trackSelect && nextTrack && shuffleMode && repeatMode && playlistTime && playlistProgress && playlistProgressFill) {
+      if (bgMusic && soundToggle && trackSelect && nextTrack && shuffleMode && repeatMode && playlistProgress && playlistProgressFill) {
         var playlist = [
           { nome: 'Energia Azul', src: 'assets/audio/music1.mp3' },
           { nome: 'Cinema Pulse', src: 'assets/audio/music2.mp3' },
@@ -980,6 +1110,7 @@
         var trocarFaixa = function (index, manterTocando) {
           trackIndex = (index + playlist.length) % playlist.length;
           trackSelect.value = String(trackIndex);
+          if (mpTrackName) mpTrackName.textContent = playlist[trackIndex].nome;
           bgMusic.src = playlist[trackIndex].src;
           bgMusic.load();
 
@@ -1040,6 +1171,13 @@
         trackSelect.addEventListener('change', function () {
           trocarFaixa(parseInt(trackSelect.value, 10) || 0, tocando);
         });
+
+        if (prevTrack) {
+          prevTrack.addEventListener('click', function () {
+            var anterior = (trackIndex - 1 + playlist.length) % playlist.length;
+            trocarFaixa(anterior, tocando);
+          });
+        }
 
         nextTrack.addEventListener('click', function () {
           trocarFaixa(proximaFaixaIndex(), tocando);
