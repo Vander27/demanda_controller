@@ -1,0 +1,1082 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Demanda Controller - Campanha Futurista</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;800&family=Plus+Jakarta+Sans:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-0: #041024;
+      --bg-1: #071b35;
+      --bg-2: #0d2f57;
+      --ink: #e6f5ff;
+      --muted: #9ec7e8;
+      --line: rgba(122, 206, 255, 0.22);
+      --brand: #16b7ff;
+      --brand-2: #0be2bf;
+      --ok: #43e790;
+      --warn: #ffd166;
+      --danger: #ff6b7a;
+      --card: rgba(6, 21, 44, 0.66);
+      --glass: rgba(9, 30, 61, 0.44);
+      --shadow: rgba(8, 35, 74, 0.45);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { min-height: 100%; }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      font-family: "Plus Jakarta Sans", "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at 12% 8%, rgba(22, 183, 255, 0.18), transparent 35%),
+        radial-gradient(circle at 86% 16%, rgba(11, 226, 191, 0.14), transparent 32%),
+        linear-gradient(180deg, var(--bg-0) 0%, var(--bg-1) 45%, var(--bg-2) 100%);
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(141, 208, 255, 0.08) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(141, 208, 255, 0.08) 1px, transparent 1px);
+      background-size: 38px 38px;
+      mask-image: radial-gradient(circle at center, #000 46%, transparent 88%);
+    }
+
+    .wrap {
+      max-width: 1140px;
+      margin: 0 auto;
+      padding: 30px 16px 46px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero {
+      position: relative;
+      border-radius: 28px;
+      border: 1px solid var(--line);
+      background:
+        linear-gradient(120deg, rgba(22, 183, 255, 0.16), rgba(11, 226, 191, 0.08)),
+        var(--glass);
+      backdrop-filter: blur(7px);
+      box-shadow: 0 20px 42px var(--shadow);
+      padding: 28px;
+      overflow: hidden;
+      animation: riseIn 680ms ease-out both;
+    }
+
+    .hero::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(95deg, transparent 0%, rgba(170, 229, 255, 0.14) 45%, transparent 100%);
+      transform: translateX(-120%);
+      animation: scan 7s ease-in-out infinite;
+      pointer-events: none;
+    }
+
+    .eyebrow {
+      margin: 0;
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: #8fd6ff;
+      font-weight: 700;
+    }
+
+    h1 {
+      margin: 10px 0 0;
+      font-family: "Orbitron", "Plus Jakarta Sans", sans-serif;
+      font-size: clamp(1.6rem, 3.5vw, 2.9rem);
+      line-height: 1.2;
+      letter-spacing: 0.02em;
+    }
+
+    .hero p {
+      margin: 12px 0 0;
+      max-width: 760px;
+      color: #cbe9ff;
+      line-height: 1.6;
+      font-size: 0.98rem;
+    }
+
+    .chips {
+      margin-top: 14px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .chip {
+      border: 1px solid rgba(143, 214, 255, 0.35);
+      border-radius: 999px;
+      background: rgba(8, 30, 62, 0.8);
+      padding: 6px 11px;
+      font-size: 12px;
+      color: #b9e6ff;
+      font-weight: 600;
+    }
+
+    .actions {
+      margin-top: 16px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .sound-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(149, 224, 255, 0.4);
+      background: rgba(8, 30, 62, 0.72);
+      color: #d9f2ff;
+      padding: 10px 14px;
+      font-size: 0.8rem;
+      font-weight: 800;
+      letter-spacing: 0.03em;
+      cursor: pointer;
+      transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease;
+    }
+
+    .sound-toggle:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(15, 75, 130, 0.34);
+    }
+
+    .sound-toggle.is-on {
+      background: linear-gradient(120deg, rgba(47, 213, 255, 0.22) 0%, rgba(103, 255, 213, 0.22) 100%);
+      border-color: rgba(103, 255, 213, 0.46);
+      color: #ecffff;
+    }
+
+    .playlist {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(149, 224, 255, 0.35);
+      background: rgba(8, 30, 62, 0.64);
+      padding: 6px 8px 6px 10px;
+    }
+
+    .playlist span {
+      font-size: 0.74rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #9ad8fb;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .playlist select {
+      border-radius: 999px;
+      border: 1px solid rgba(145, 220, 255, 0.34);
+      background: rgba(4, 19, 41, 0.82);
+      color: #dcf3ff;
+      padding: 6px 10px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      outline: none;
+      min-width: 150px;
+    }
+
+    .playlist button {
+      border-radius: 999px;
+      border: 1px solid rgba(145, 220, 255, 0.34);
+      background: rgba(9, 39, 73, 0.78);
+      color: #d7f1ff;
+      padding: 6px 10px;
+      font-size: 0.76rem;
+      font-weight: 800;
+      cursor: pointer;
+      transition: transform 180ms ease, background 180ms ease;
+    }
+
+    .playlist button:hover {
+      transform: translateY(-1px);
+      background: rgba(16, 61, 112, 0.84);
+    }
+
+    .playlist button.is-active {
+      background: linear-gradient(120deg, rgba(47, 213, 255, 0.3) 0%, rgba(103, 255, 213, 0.24) 100%);
+      border-color: rgba(103, 255, 213, 0.5);
+      color: #f1ffff;
+    }
+
+    .playlist-time {
+      width: 100%;
+      margin-top: 6px;
+      font-size: 0.74rem;
+      color: #9ad2f0;
+      letter-spacing: 0.02em;
+      text-align: right;
+    }
+
+    .playlist-progress {
+      width: 100%;
+      height: 8px;
+      margin-top: 6px;
+      border-radius: 999px;
+      border: 1px solid rgba(120, 201, 245, 0.26);
+      background: rgba(6, 24, 47, 0.76);
+      overflow: visible;
+      cursor: pointer;
+      position: relative;
+    }
+
+    .playlist-progress-thumb {
+      position: absolute;
+      top: 50%;
+      left: 0%;
+      transform: translate(-50%, -50%);
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 35%, #a0f4ff 0%, #2fd5ff 55%, #0fa8dc 100%);
+      box-shadow: 0 0 6px 2px rgba(47, 213, 255, 0.9), 0 0 18px rgba(47, 213, 255, 0.5);
+      pointer-events: none;
+      transition: left 120ms linear, box-shadow 200ms ease;
+      z-index: 2;
+    }
+
+    .playlist-progress:hover .playlist-progress-thumb {
+      width: 17px;
+      height: 17px;
+      box-shadow: 0 0 8px 3px rgba(47, 213, 255, 1), 0 0 28px rgba(103, 255, 213, 0.7);
+    }
+
+    .playlist-progress-fill {
+      height: 100%;
+      width: 0%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, rgba(47, 213, 255, 0.95) 0%, rgba(103, 255, 213, 0.95) 100%);
+      box-shadow: 0 0 16px rgba(47, 213, 255, 0.35);
+      transition: width 120ms linear;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      text-decoration: none;
+      border-radius: 999px;
+      padding: 10px 14px;
+      font-size: 0.83rem;
+      font-weight: 800;
+      letter-spacing: 0.03em;
+      border: 1px solid transparent;
+      transition: transform 180ms ease, box-shadow 180ms ease;
+    }
+
+    .btn.primary {
+      color: #031529;
+      background: linear-gradient(120deg, #2fd5ff 0%, #67ffd5 100%);
+      box-shadow: 0 10px 24px rgba(35, 197, 255, 0.28);
+    }
+
+    .btn.ghost {
+      color: #c5ebff;
+      border-color: rgba(149, 224, 255, 0.32);
+      background: rgba(8, 30, 62, 0.62);
+    }
+
+    .btn:hover { transform: translateY(-2px); }
+
+    .section-title {
+      margin: 24px 0 10px;
+      color: #87d4ff;
+      font-family: "Orbitron", "Plus Jakarta Sans", sans-serif;
+      font-size: 0.9rem;
+      letter-spacing: 0.17em;
+      text-transform: uppercase;
+    }
+
+    .story {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(245px, 1fr));
+      gap: 12px;
+    }
+
+    .story-card {
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      background: var(--card);
+      box-shadow: 0 10px 24px rgba(5, 22, 48, 0.45);
+      padding: 16px;
+      animation: riseIn 650ms ease-out both;
+    }
+
+    .story-card:nth-child(2) { animation-delay: 90ms; }
+    .story-card:nth-child(3) { animation-delay: 140ms; }
+
+    .story-card .kicker {
+      font-size: 11px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: #8acfff;
+      margin: 0;
+      font-weight: 700;
+    }
+
+    .story-card h3 {
+      margin: 8px 0 0;
+      font-size: 1.07rem;
+      color: #f0fbff;
+      font-family: "Orbitron", "Plus Jakarta Sans", sans-serif;
+      letter-spacing: 0.02em;
+    }
+
+    .story-card p {
+      margin: 8px 0 0;
+      color: #b6d8f2;
+      line-height: 1.52;
+      font-size: 0.92rem;
+    }
+
+    .timeline {
+      margin-top: 12px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 10px;
+    }
+
+    .step {
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(6, 27, 56, 0.7);
+      padding: 12px;
+    }
+
+    .step .time {
+      display: inline-block;
+      border-radius: 999px;
+      border: 1px solid rgba(121, 218, 255, 0.36);
+      padding: 3px 8px;
+      font-size: 11px;
+      color: #9edcff;
+      margin-bottom: 8px;
+      font-weight: 700;
+    }
+
+    .step h4 {
+      margin: 0;
+      font-size: 0.93rem;
+      color: #e8f8ff;
+      letter-spacing: 0.02em;
+    }
+
+    .step p {
+      margin: 6px 0 0;
+      color: #aacde7;
+      font-size: 0.86rem;
+      line-height: 1.42;
+    }
+
+    .metrics {
+      margin-top: 12px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 10px;
+    }
+
+    .metric {
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(6, 27, 56, 0.8);
+      padding: 12px;
+    }
+
+    .metric .label {
+      font-size: 11px;
+      color: #8fd4ff;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      margin: 0;
+      font-weight: 700;
+    }
+
+    .metric .value {
+      margin: 8px 0 0;
+      font-size: 1.5rem;
+      font-family: "Orbitron", "Plus Jakarta Sans", sans-serif;
+      color: #f4fcff;
+      line-height: 1;
+    }
+
+    .metric .hint {
+      margin: 6px 0 0;
+      font-size: 0.82rem;
+      color: #a9d0eb;
+    }
+
+    .value.ok { color: var(--ok); }
+    .value.warn { color: var(--warn); }
+    .value.danger { color: var(--danger); }
+
+    .gallery {
+      margin-top: 12px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 12px;
+    }
+
+    .reels {
+      margin-top: 12px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+    }
+
+    .reel {
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      background: rgba(6, 27, 56, 0.82);
+      padding: 12px;
+      box-shadow: 0 10px 22px rgba(7, 29, 55, 0.45);
+    }
+
+    .reel h4 {
+      margin: 0;
+      font-size: 0.9rem;
+      color: #dff4ff;
+      font-family: "Orbitron", "Plus Jakarta Sans", sans-serif;
+      letter-spacing: 0.02em;
+    }
+
+    .reel p {
+      margin: 7px 0 10px;
+      color: #a8cde7;
+      font-size: 0.83rem;
+      line-height: 1.4;
+    }
+
+    .reel video {
+      width: 100%;
+      aspect-ratio: 9 / 16;
+      object-fit: cover;
+      border-radius: 12px;
+      border: 1px solid rgba(138, 210, 255, 0.32);
+      background: #020b19;
+      display: block;
+      opacity: 0;
+      filter: saturate(1.06) contrast(1.04) brightness(0.94);
+      transform: scale(1.015);
+      transition: opacity 900ms ease, transform 1400ms ease, filter 1000ms ease;
+    }
+
+    .reel video.is-visible {
+      opacity: 1;
+      transform: scale(1);
+      filter: saturate(1.1) contrast(1.06) brightness(0.98);
+    }
+
+    .reel-frame {
+      position: relative;
+      border-radius: 12px;
+      overflow: hidden;
+      background: #020b19;
+    }
+
+    .reel-frame::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      border-radius: 12px;
+      border: 1px solid rgba(132, 212, 255, 0.28);
+      box-shadow: inset 0 0 48px rgba(14, 62, 115, 0.26);
+      z-index: 2;
+    }
+
+    .reel-frame::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 36%;
+      pointer-events: none;
+      background: linear-gradient(180deg, rgba(1, 8, 17, 0) 0%, rgba(1, 8, 17, 0.68) 100%);
+      z-index: 1;
+    }
+
+    .reel .path {
+      margin-top: 9px;
+      display: block;
+      font-size: 0.75rem;
+      color: #91c8ea;
+      font-family: Consolas, "Courier New", monospace;
+      word-break: break-word;
+    }
+
+    .shot {
+      border-radius: 16px;
+      border: 1px dashed rgba(127, 210, 255, 0.38);
+      background:
+        linear-gradient(130deg, rgba(15, 61, 107, 0.65), rgba(7, 29, 55, 0.88));
+      padding: 14px;
+      min-height: 140px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .shot h4 {
+      margin: 0;
+      font-size: 0.95rem;
+      color: #dff4ff;
+      letter-spacing: 0.02em;
+      font-family: "Orbitron", "Plus Jakarta Sans", sans-serif;
+    }
+
+    .shot p {
+      margin: 8px 0 0;
+      color: #9dc5e2;
+      font-size: 0.86rem;
+      line-height: 1.4;
+    }
+
+    .shot code {
+      margin-top: 10px;
+      display: inline-block;
+      border-radius: 8px;
+      border: 1px solid rgba(136, 217, 255, 0.3);
+      padding: 5px 7px;
+      font-size: 0.78rem;
+      color: #9edcff;
+      background: rgba(8, 30, 62, 0.52);
+    }
+
+    .cta {
+      margin-top: 16px;
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      background:
+        linear-gradient(130deg, rgba(22, 183, 255, 0.16), rgba(11, 226, 191, 0.08)),
+        rgba(6, 26, 54, 0.72);
+      padding: 18px;
+      box-shadow: 0 12px 28px rgba(8, 35, 74, 0.4);
+    }
+
+    .cta h3 {
+      margin: 0;
+      font-family: "Orbitron", "Plus Jakarta Sans", sans-serif;
+      font-size: clamp(1.05rem, 2vw, 1.4rem);
+      color: #f2fcff;
+      line-height: 1.3;
+    }
+
+    .cta p {
+      margin: 8px 0 0;
+      color: #c7e8ff;
+      line-height: 1.5;
+      font-size: 0.92rem;
+    }
+
+    .footer {
+      margin-top: 18px;
+      text-align: center;
+      color: #8cb8d8;
+      font-size: 0.8rem;
+    }
+
+    @keyframes riseIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes scan {
+      0% { transform: translateX(-120%); opacity: 0; }
+      35% { opacity: 0.86; }
+      52% { transform: translateX(24%); opacity: 0.58; }
+      100% { transform: translateX(120%); opacity: 0; }
+    }
+
+    @media (max-width: 640px) {
+      .wrap { padding: 20px 14px 34px; }
+      .hero { padding: 20px 16px; border-radius: 20px; }
+      .actions { gap: 8px; }
+      .playlist {
+        width: 100%;
+        justify-content: space-between;
+      }
+      .playlist span {
+        font-size: 0.68rem;
+      }
+      .playlist select {
+        min-width: 116px;
+        flex: 1;
+      }
+      .playlist-time {
+        font-size: 0.68rem;
+      }
+      .playlist-progress {
+        height: 7px;
+      }
+      .section-title {
+        margin-top: 20px;
+        font-size: 0.78rem;
+        letter-spacing: 0.14em;
+      }
+      .story-card,
+      .step,
+      .metric,
+      .reel,
+      .shot {
+        border-radius: 14px;
+      }
+      .reel {
+        padding: 10px;
+        border-color: rgba(140, 216, 255, 0.34);
+      }
+      .reel h4 {
+        font-size: 0.85rem;
+      }
+      .reel p {
+        font-size: 0.8rem;
+        margin-bottom: 8px;
+      }
+      .reel .path {
+        font-size: 0.7rem;
+      }
+      .cta {
+        padding: 14px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <section class="hero">
+      <p class="eyebrow">Demanda Controller · Narrativa de Marca</p>
+      <h1>Assuma o Controle.<br>Conecte Campo, Dados e Resultado.</h1>
+      <p>
+        Uma historia de operacao real: equipes em campo, evidencias padronizadas, relatorios diarios,
+        inteligencia financeira e decisao em tempo de execucao. Esta pagina foi desenhada para seu site
+        no GitHub Pages com esttica futurista, profissional e orientada a conversao.
+      </p>
+      <div class="chips">
+        <span class="chip">Operacao em campo</span>
+        <span class="chip">Relatorio diario</span>
+        <span class="chip">Gestao financeira</span>
+        <span class="chip">Dashboard inteligente</span>
+      </div>
+      <div class="actions">
+        <a class="btn primary" href="index.html">Voltar ao portal</a>
+        <a class="btn ghost" href="guia-usuario-completo.html">Ver guia completo</a>
+        <button class="sound-toggle" id="soundToggle" type="button" aria-pressed="false">Trilha: desligada</button>
+        <div class="playlist" aria-label="Mini playlist da campanha">
+          <span>Mini Playlist</span>
+          <select id="trackSelect" aria-label="Selecionar faixa">
+            <option value="0">Faixa 01 · Energia Azul</option>
+            <option value="1">Faixa 02 · Cinema Pulse</option>
+            <option value="2">Faixa 03 · Skyline</option>
+            <option value="3">Faixa 04 · Field Motion</option>
+            <option value="4">Faixa 05 · Night Ops</option>
+            <option value="5">Faixa 06 · Horizon</option>
+          </select>
+          <button id="shuffleMode" type="button" aria-pressed="false">Aleatório</button>
+          <button id="repeatMode" type="button" aria-pressed="false">Repetir</button>
+          <button id="nextTrack" type="button">Próxima</button>
+        </div>
+        <div class="playlist-time" id="playlistTime">00:00 / 00:00</div>
+        <div class="playlist-progress" id="playlistProgress" role="slider" aria-label="Progresso da faixa" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" tabindex="0">
+          <div class="playlist-progress-fill" id="playlistProgressFill"></div>
+          <div class="playlist-progress-thumb" id="playlistProgressThumb"></div>
+        </div>
+      </div>
+    </section>
+
+    <h2 class="section-title">Storyline Oficial</h2>
+    <section class="story">
+      <article class="story-card">
+        <p class="kicker">Ato 1</p>
+        <h3>Inicio da Missao</h3>
+        <p>
+          O dia comeca com rota, equipe e objetivo claro. Cada frente de trabalho entra em campo
+          com padrao operacional unico.
+        </p>
+      </article>
+      <article class="story-card">
+        <p class="kicker">Ato 2</p>
+        <h3>Execucao com Evidencia</h3>
+        <p>
+          Cada acao vira dado estruturado: checklist, anotacao, status de site, relatorio diario
+          e registro tecnico rastreavel.
+        </p>
+      </article>
+      <article class="story-card">
+        <p class="kicker">Ato 3</p>
+        <h3>Decisao e Crescimento</h3>
+        <p>
+          O fechamento do dia entrega clareza financeira, produtividade por equipe e visao de futuro
+          para escalar com controle.
+        </p>
+      </article>
+    </section>
+
+    <h2 class="section-title">Ritmo de Operacao</h2>
+    <section class="timeline">
+      <article class="step">
+        <span class="time">06:30</span>
+        <h4>Planejamento</h4>
+        <p>Rotas, prioridades de site e distribuicao de equipe.</p>
+      </article>
+      <article class="step">
+        <span class="time">10:00</span>
+        <h4>Execucao</h4>
+        <p>Status por site atualizado em tempo real durante a operacao.</p>
+      </article>
+      <article class="step">
+        <span class="time">14:30</span>
+        <h4>Relatorio Diario</h4>
+        <p>Registro padronizado com contexto tecnico para auditoria.</p>
+      </article>
+      <article class="step">
+        <span class="time">18:00</span>
+        <h4>Fechamento</h4>
+        <p>Consolidacao financeira e tomada de decisao para o proximo ciclo.</p>
+      </article>
+    </section>
+
+    <h2 class="section-title">Painel de Impacto</h2>
+    <section class="metrics">
+      <article class="metric">
+        <p class="label">Sites Ativos</p>
+        <p class="value">128</p>
+        <p class="hint">Cobertura operacional em multiplas frentes.</p>
+      </article>
+      <article class="metric">
+        <p class="label">Relatorios Hoje</p>
+        <p class="value ok">24</p>
+        <p class="hint">Ritmo diario com rastreabilidade completa.</p>
+      </article>
+      <article class="metric">
+        <p class="label">Lucro Liquido</p>
+        <p class="value ok">R$ 68.540</p>
+        <p class="hint">Visao de margem para decisao de crescimento.</p>
+      </article>
+      <article class="metric">
+        <p class="label">Despesas</p>
+        <p class="value danger">R$ 51.760</p>
+        <p class="hint">Controle de custo para ganho de eficiencia.</p>
+      </article>
+    </section>
+
+    <h2 class="section-title">Galeria da Campanha</h2>
+    <section class="gallery">
+      <article class="shot">
+        <div>
+          <h4>Cena 01 · Hero Principal</h4>
+          <p>Personagem + torre + cards de indicadores para abertura do site.</p>
+        </div>
+        <code>assets/campanha/hero-principal.jpg</code>
+      </article>
+      <article class="shot">
+        <div>
+          <h4>Cena 02 · Operacao Nacional</h4>
+          <p>Estrada, mapa do Brasil e narrativa de cobertura do territorio.</p>
+        </div>
+        <code>assets/campanha/operacao-brasil.jpg</code>
+      </article>
+      <article class="shot">
+        <div>
+          <h4>Cena 03 · Tecnico em Campo</h4>
+          <p>Imagem de autoridade tecnica com EPI e identidade visual da marca.</p>
+        </div>
+        <code>assets/campanha/tecnico-campo.jpg</code>
+      </article>
+      <article class="shot">
+        <div>
+          <h4>Cena 04 · Performance</h4>
+          <p>Composicao de dashboard, relatorios e metas de resultado.</p>
+        </div>
+        <code>assets/campanha/performance.jpg</code>
+      </article>
+    </section>
+
+    <h2 class="section-title">Reels Verticais</h2>
+    <section class="reels">
+      <article class="reel">
+        <h4>Reel 01 · Apresentacao curta</h4>
+        <p>Formato vertical 9:16 com autoplay silencioso para hero dinamico da pagina.</p>
+        <div class="reel-frame">
+          <video controls muted loop playsinline preload="metadata">
+            <source src="assets/videos/reel-01.mp4#t=6,14" type="video/mp4">
+          </video>
+        </div>
+        <span class="path">assets/videos/reel-01.mp4</span>
+      </article>
+      <article class="reel">
+        <h4>Reel 02 · Operacao em campo</h4>
+        <p>Segunda variacao para alternar narrativa entre missao e resultado.</p>
+        <div class="reel-frame">
+          <video controls muted loop playsinline preload="metadata">
+            <source src="assets/videos/reel-02.mp4#t=6,14" type="video/mp4">
+          </video>
+        </div>
+        <span class="path">assets/videos/reel-02.mp4</span>
+      </article>
+    </section>
+
+    <section class="cta">
+      <h3>Frase de fechamento recomendada</h3>
+      <p>
+        Informacao que conecta. Gestao que transforma. Resultado que escala.
+        O Demanda Controller foi feito para quem precisa transformar operacao de campo
+        em decisao estrategica todos os dias.
+      </p>
+      <div class="actions">
+        <a class="btn primary" href="https://vander27.github.io/demanda_controller/">Ver no GitHub Pages</a>
+        <a class="btn ghost" href="publicacao-github-pages.html">Guia de publicacao</a>
+      </div>
+    </section>
+
+    <p class="footer">Demanda Controller · Campanha Futurista · Atualizado em 11/05/2026</p>
+  </main>
+
+  <audio id="bgMusic" preload="metadata">
+    <source src="assets/audio/music1.mp3" type="audio/mpeg">
+  </audio>
+
+  <script>
+    (function () {
+      var velocidade = 0.75;
+      var videos = document.querySelectorAll('.reel video');
+      videos.forEach(function (video) {
+        video.autoplay = true;
+        video.muted = true;
+        video.playsInline = true;
+
+        var aplicar = function () {
+          video.defaultPlaybackRate = velocidade;
+          video.playbackRate = velocidade;
+        };
+
+        var revelar = function () {
+          video.classList.add('is-visible');
+        };
+
+        video.addEventListener('loadedmetadata', aplicar);
+        video.addEventListener('play', aplicar);
+        video.addEventListener('loadeddata', revelar, { once: true });
+
+        if (video.readyState >= 2) {
+          revelar();
+        }
+
+        var tentarAutoplay = function () {
+          var promessa = video.play();
+          if (promessa && typeof promessa.catch === 'function') {
+            promessa.catch(function () {});
+          }
+        };
+
+        video.addEventListener('canplay', tentarAutoplay, { once: true });
+        tentarAutoplay();
+
+        aplicar();
+      });
+
+      if ('IntersectionObserver' in window) {
+        var io = new IntersectionObserver(function (entries) {
+          entries.forEach(function (entry) {
+            var video = entry.target;
+            if (entry.isIntersecting && entry.intersectionRatio >= 0.45) {
+              var p = video.play();
+              if (p && typeof p.catch === 'function') {
+                p.catch(function () {});
+              }
+            } else {
+              video.pause();
+            }
+          });
+        }, { threshold: [0, 0.45, 0.8] });
+
+        videos.forEach(function (video) { io.observe(video); });
+      }
+
+      var bgMusic = document.getElementById('bgMusic');
+      var soundToggle = document.getElementById('soundToggle');
+      var trackSelect = document.getElementById('trackSelect');
+      var nextTrack = document.getElementById('nextTrack');
+      var shuffleMode = document.getElementById('shuffleMode');
+      var repeatMode = document.getElementById('repeatMode');
+      var playlistTime = document.getElementById('playlistTime');
+      var playlistProgress = document.getElementById('playlistProgress');
+      var playlistProgressFill = document.getElementById('playlistProgressFill');
+      var playlistProgressThumb = document.getElementById('playlistProgressThumb');
+
+      if (bgMusic && soundToggle && trackSelect && nextTrack && shuffleMode && repeatMode && playlistTime && playlistProgress && playlistProgressFill) {
+        var playlist = [
+          { nome: 'Energia Azul', src: 'assets/audio/music1.mp3' },
+          { nome: 'Cinema Pulse', src: 'assets/audio/music2.mp3' },
+          { nome: 'Skyline', src: 'assets/audio/music3.mp3' },
+          { nome: 'Field Motion', src: 'assets/audio/music4.mp3' },
+          { nome: 'Night Ops', src: 'assets/audio/music5.mp3' },
+          { nome: 'Horizon', src: 'assets/audio/music6.mp3' }
+        ];
+        var trackIndex = 0;
+        var tocando = false;
+        var modoAleatorio = false;
+        var modoRepetir = false;
+
+        bgMusic.volume = 0.22;
+        bgMusic.loop = false;
+
+        var formatarTempo = function (segundos) {
+          if (!isFinite(segundos)) return '00:00';
+          var total = Math.max(0, Math.floor(segundos));
+          var mm = String(Math.floor(total / 60)).padStart(2, '0');
+          var ss = String(total % 60).padStart(2, '0');
+          return mm + ':' + ss;
+        };
+
+        var atualizarTempo = function () {
+          var duracao = bgMusic.duration;
+          var atual = bgMusic.currentTime;
+          var progresso = 0;
+          if (isFinite(duracao) && duracao > 0) {
+            progresso = Math.min(100, Math.max(0, (atual / duracao) * 100));
+          }
+          playlistTime.textContent = formatarTempo(atual) + ' / ' + formatarTempo(duracao);
+          playlistProgressFill.style.width = progresso + '%';
+          if (playlistProgressThumb) playlistProgressThumb.style.left = progresso + '%';
+          playlistProgress.setAttribute('aria-valuenow', String(Math.round(progresso)));
+        };
+
+        var definirProgresso = function (clientX) {
+          var duracao = bgMusic.duration;
+          if (!isFinite(duracao) || duracao <= 0) return;
+          var rect = playlistProgress.getBoundingClientRect();
+          var rel = (clientX - rect.left) / rect.width;
+          var clamped = Math.min(1, Math.max(0, rel));
+          bgMusic.currentTime = clamped * duracao;
+          atualizarTempo();
+        };
+
+        var atualizarTextoToggle = function () {
+          if (tocando) {
+            soundToggle.textContent = 'Trilha: ligada · ' + playlist[trackIndex].nome;
+            soundToggle.classList.add('is-on');
+            soundToggle.setAttribute('aria-pressed', 'true');
+          } else {
+            soundToggle.textContent = 'Trilha: desligada';
+            soundToggle.classList.remove('is-on');
+            soundToggle.setAttribute('aria-pressed', 'false');
+          }
+        };
+
+        var trocarFaixa = function (index, manterTocando) {
+          trackIndex = (index + playlist.length) % playlist.length;
+          trackSelect.value = String(trackIndex);
+          bgMusic.src = playlist[trackIndex].src;
+          bgMusic.load();
+
+          if (manterTocando) {
+            var p = bgMusic.play();
+            if (p && typeof p.catch === 'function') {
+              p.catch(function () {
+                tocando = false;
+                atualizarTextoToggle();
+              });
+            }
+          }
+
+          atualizarTextoToggle();
+          atualizarTempo();
+        };
+
+        var proximaFaixaIndex = function () {
+          if (modoRepetir) return trackIndex;
+          if (modoAleatorio && playlist.length > 1) {
+            var novo = trackIndex;
+            while (novo === trackIndex) {
+              novo = Math.floor(Math.random() * playlist.length);
+            }
+            return novo;
+          }
+          return trackIndex + 1;
+        };
+
+        bgMusic.addEventListener('ended', function () {
+          if (tocando) {
+            trocarFaixa(proximaFaixaIndex(), true);
+          }
+        });
+
+        bgMusic.addEventListener('timeupdate', atualizarTempo);
+        bgMusic.addEventListener('loadedmetadata', atualizarTempo);
+        bgMusic.addEventListener('durationchange', atualizarTempo);
+
+        playlistProgress.addEventListener('click', function (event) {
+          definirProgresso(event.clientX);
+        });
+
+        playlistProgress.addEventListener('keydown', function (event) {
+          if (!isFinite(bgMusic.duration) || bgMusic.duration <= 0) return;
+          var delta = Math.max(3, bgMusic.duration * 0.02);
+          if (event.key === 'ArrowRight') {
+            bgMusic.currentTime = Math.min(bgMusic.duration, bgMusic.currentTime + delta);
+            atualizarTempo();
+            event.preventDefault();
+          } else if (event.key === 'ArrowLeft') {
+            bgMusic.currentTime = Math.max(0, bgMusic.currentTime - delta);
+            atualizarTempo();
+            event.preventDefault();
+          }
+        });
+
+        trackSelect.addEventListener('change', function () {
+          trocarFaixa(parseInt(trackSelect.value, 10) || 0, tocando);
+        });
+
+        nextTrack.addEventListener('click', function () {
+          trocarFaixa(proximaFaixaIndex(), tocando);
+        });
+
+        shuffleMode.addEventListener('click', function () {
+          modoAleatorio = !modoAleatorio;
+          shuffleMode.classList.toggle('is-active', modoAleatorio);
+          shuffleMode.setAttribute('aria-pressed', modoAleatorio ? 'true' : 'false');
+        });
+
+        repeatMode.addEventListener('click', function () {
+          modoRepetir = !modoRepetir;
+          repeatMode.classList.toggle('is-active', modoRepetir);
+          repeatMode.setAttribute('aria-pressed', modoRepetir ? 'true' : 'false');
+        });
+
+        soundToggle.addEventListener('click', function () {
+          if (bgMusic.paused) {
+            var p = bgMusic.play();
+            if (p && typeof p.then === 'function') {
+              p.then(function () {
+                tocando = true;
+                atualizarTextoToggle();
+              }).catch(function () {});
+            }
+          } else {
+            bgMusic.pause();
+            tocando = false;
+            atualizarTextoToggle();
+          }
+        });
+
+        trocarFaixa(0, false);
+        atualizarTempo();
+      }
+    })();
+  </script>
+</body>
+</html>
